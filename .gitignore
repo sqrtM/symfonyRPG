@@ -6,7 +6,6 @@
 .env
 .env.test
 *.env
-*.js
 /build
 /config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
