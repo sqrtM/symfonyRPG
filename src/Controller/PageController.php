@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\State;
+use App\NoiseGenerator\NoiseGenerator;
+use App\NoiseGenerator\NoiseWriter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -35,12 +37,24 @@ class PageController extends AbstractController
     #[Route('/game', name: 'game', methods: ['GET'])]
     public function game(): Response
     {
+        $noiseGenerator = new NoiseGenerator();
+
+        $width = 65;
+        $height = 35;
+
+        $noiseArray = array_fill(0, $height, array_fill(0, $width, 0));
+
+        for ($i = 0; $i < $height; $i++) {
+            for ($j = 0; $j < $width; $j++) {
+                $noiseArray[$i][$j] += $noiseGenerator->random2D($i / $width * ($width >> 4), $j / $height * ($height >> 4));
+            }   
+        }
 
         $testArray = array(
             "name" => "name",
             "health" => 100,
             "location" => array(0, 0),
-            "status" => "hungry"
+            "map" => $noiseArray
         );
 
         $state = new State($testArray);
