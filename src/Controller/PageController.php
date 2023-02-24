@@ -4,18 +4,17 @@ namespace App\Controller;
 
 use App\Entity\State;
 use App\NoiseGenerator\NoiseGenerator;
-use App\NoiseGenerator\NoiseWriter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
  * POSTGRES is set up in such a way that it accepts 
- * a username so you can search the user, as well 
- * as a whole JSON file. I thought this would be
+ * a username so you can search the user and receive 
+ * a whole JSON file. I thought this would be
  * easier for storing state and scaling, if the 
  * game becomes large (this is inspired by RPGmaker
- * and its file system).
+ * and its save file system).
  * 
  * Maybe the map should be held in a different column? ... 
  * 
@@ -34,8 +33,8 @@ class PageController extends AbstractController
         return $this->render('hello.html.twig', []);
     }
 
-    #[Route('/game', name: 'game', methods: ['GET'])]
-    public function game(): Response
+    #[Route('/game/{name}', name: 'game', methods: ['GET'])]
+    public function game(string $name): Response
     {
         $noiseGenerator = new NoiseGenerator();
 
@@ -47,7 +46,7 @@ class PageController extends AbstractController
         for ($i = 0; $i < $height; $i++) {
             for ($j = 0; $j < $width; $j++) {
                 $noiseArray[$i][$j] += $noiseGenerator->random2D($i / $width * ($width >> 4), $j / $height * ($height >> 4));
-            }   
+            }
         }
 
         $testArray = array(

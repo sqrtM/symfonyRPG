@@ -5,7 +5,7 @@ namespace App\Entity;
 use JsonSerializable;
 use stdClass;
 
-class State implements JsonSerializable
+class State extends stdClass implements JsonSerializable
 {
 
     private stdClass $stateObj;
@@ -31,7 +31,7 @@ class State implements JsonSerializable
     /**
      * Specify data which should be serialized to JSON
      * Serializes the object to a value that can be serialized natively by json_encode().
-     * @return mixed Returns data which can be serialized by json_encode(), which is a value of any type other than a resource .
+     * @return State Returns data which can be serialized by json_encode(), which is a value of any type other than a resource .
      */
     public function jsonSerialize()
     {
