@@ -52,7 +52,7 @@ class PageController extends AbstractController
         $testArray = array(
             "name" => "name",
             "health" => 100,
-            "location" => array(0, 0),
+            "location" => array(floor($width / 2), floor($height / 2)),
             "map" => $noiseArray
         );
 

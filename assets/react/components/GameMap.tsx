@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { LocationTuple } from '../controllers/game'
 
 export type MapState = {
-  map: number[][];
+  map: number[][]
   location: LocationTuple
 }
 
@@ -38,38 +38,39 @@ export default function (props: MapState): JSX.Element {
     }
   }, [])
 
+  /**
+   * this, for some reason, moves the screen by two units when it needs to scroll.
+   * No clue why. 
+   */
   let viewport = (screenHeight: number, screenWidth: number): number[][] => {
-    let playerYCoord = location[0]
-    let playerXCoord = location[1]
     let yRange = Math.floor(screenWidth / 2)
     let xRange = Math.floor(screenHeight / 2)
     let leftSideOverflow = 0
-    if (playerXCoord < xRange) {
-      xRange = playerXCoord
-      leftSideOverflow = screenHeight - (playerXCoord + Math.floor(screenHeight / 2))
+    if (location[1] < xRange) {
+      xRange = location[1]
+      leftSideOverflow = screenHeight - (location[1] + xRange)
     }
 
-    let arr: number[][] = []
-    for (let i = playerYCoord - yRange; i < playerYCoord + yRange + 1; i++) {
-      if (i <= 0) {
-        i = 0
-      } else if (i > props.map.length - 1) {
-        i = props.map.length - 1
+    let visibleMap: number[][] = []
+    for (let row = location[0] - yRange; row < location[0] + yRange; row++) {
+      if (row <= 0) {
+        row = 0
+      } else if (row > props.map.length - 1) {
+        row = props.map.length - 1
       }
-      arr.push(
-        props.map[i].slice(
-          playerXCoord - xRange,
-          playerXCoord + xRange + 1 + leftSideOverflow,
+      visibleMap.push(
+        props.map[row].slice(
+          location[1] - xRange,
+          location[1] + xRange + leftSideOverflow,
         ),
       )
     }
-    console.log(playerXCoord, playerYCoord)
-    return arr;
+    return visibleMap
   }
 
   return (
     <div>
-      {viewport(40, 20).map((row: number[], yCoord: number) => {
+      {viewport(50, 25).map((row: number[], yCoord: number) => {
         return (
           <div key={Math.random() + row[yCoord]}>
             {row.map((_column: number, xCoord: number) => {
