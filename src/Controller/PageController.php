@@ -38,8 +38,8 @@ class PageController extends AbstractController
     {
         $noiseGenerator = new NoiseGenerator();
 
-        $width = 65;
-        $height = 35;
+        $width = 500;
+        $height = 500;
 
         $noiseArray = array_fill(0, $height, array_fill(0, $width, 0));
 

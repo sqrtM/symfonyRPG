@@ -1,71 +1,26 @@
 import * as React from 'react'
-import { useEffect, useState } from 'react'
+import GameMap from '../components/GameMap'
 
-export interface IGameState {
+/**
+ * top left corner is (0,0)
+ * bottom right corner is (height, width)
+ */
+export type LocationTuple = [y: number, x: number]
+
+export type GameState = {
   state: {
-    map: number[][]
+    map: number[][];
     name: string
     health: number
-    location: [number, number]
+    location: LocationTuple
   }
 }
 
-export default function (props: IGameState): JSX.Element {
-  const [location, setLocation] = useState<[number, number]>(
-    props.state.location,
-  )
-
-  const keyListener = (e: KeyboardEvent) => {
-    // for some reason, writing a unary "--" creates a very different
-    // interaction than "-= 1". Weird.
-    switch (e.key) {
-      case 'ArrowUp':
-        setLocation([(location[0] -= 1), location[1]])
-        break
-      case 'ArrowDown':
-        setLocation([(location[0] += 1), location[1]])
-        break
-      case 'ArrowRight':
-        setLocation([location[0], (location[1] += 1)])
-        break
-      case 'ArrowLeft':
-        setLocation([location[0], (location[1] -= 1)])
-        break
-      default:
-        break
-    }
-  }
-
-  useEffect(() => {
-    window.addEventListener('keydown', keyListener)
-    return () => {
-      window.removeEventListener('keydown', keyListener)
-    }
-  }, [])
+export default function (props: GameState): JSX.Element {
 
   return (
-    <div>
-      {props.state.map.map((i: number[], index: number) => {
-        return (
-          <div key={Math.random() + i[index]}>
-            {i.map((_j: number, jndex: number) => {
-              let color = Math.abs(i[jndex] * 360)
-              return (
-                <span
-                  style={
-                    index === location[0] && jndex === location[1]
-                      ? { color: 'white' } // @
-                      : { color: `hsl(${color}, 100%, 50%)` } // #
-                  }
-                  key={color + Math.random()}
-                >
-                  {index === location[0] && jndex === location[1] ? '@' : '#'}
-                </span>
-              )
-            })}
-          </div>
-        )
-      })}
-    </div>
+    <>
+      <GameMap map={props.state.map} location={props.state.location} />
+    </>
   )
 }

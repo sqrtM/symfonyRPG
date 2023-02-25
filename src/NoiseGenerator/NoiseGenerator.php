@@ -6,11 +6,11 @@ namespace App\NoiseGenerator;
  */
 class NoiseGenerator
 {
-    private Array $p;
+    private array $p;
     private array $permutation;
     private int $seed;
 
-    function __construct($seed = null)
+    function __construct(int $seed = null)
     {
         //Initialize the permutation array
         $this->p = array();
@@ -279,14 +279,10 @@ class NoiseGenerator
         }
 
         //And set the seed
-        if ($seed === null) {
-            $this->seed = microtime(true) * 10000;
-        } else {
-            $this->seed = $seed;
-        }
+        $this->seed = ($seed === null) ? (int) microtime(true) * 10000 : $seed;
     }
 
-    function noise($x, $y, $z, array $octaves)
+    function noise(float $x, float $y, float $z, array $octaves): float
     {
         //Set the initial value and initial size
         $value = 0.0;
@@ -303,7 +299,7 @@ class NoiseGenerator
 
     //This function determines what cube the point passed resides in
     //and determines its value.
-    function smoothNoise($x, $y, $z)
+    function smoothNoise(float $x, float $y, float $z): float
     {
         //Offset each coordinate by the seed value
         $x += $this->seed;
@@ -362,18 +358,18 @@ class NoiseGenerator
         return $result;
     }
 
-    function fade($t)
+    function fade(float $t): float
     {
         return $t * $t * $t * (($t * (($t * 6) - 15)) + 10);
     }
 
-    function lerp($t, $a, $b)
+    function lerp(float $t, float $a, float $b): float
     {
         //Make a weighted interpolation between points
         return $a + $t * ($b - $a);
     }
 
-    function grad($hash, $x, $y, $z)
+    function grad(float $hash, float $x, float $y, float $z): float
     {
         // CONVERT LO 4 BITS OF HASH CODE INTO 12 GRADIENT DIRECTIONS
         $h = $hash & 15;
@@ -383,7 +379,7 @@ class NoiseGenerator
         return (($h & 1) == 0 ? $u : -$u) + (($h & 2) == 0 ? $v : -$v);
     }
 
-    function random2D($x, $y)
+    function random2D(float $x, float $y): float
     {
         $x += $this->seed;
         $y += $this->seed;

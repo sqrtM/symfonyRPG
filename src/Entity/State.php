@@ -22,7 +22,7 @@ class State extends stdClass implements JsonSerializable
         $generic = new stdClass();
 
         foreach ($array as $key => &$val) {
-            $generic->$key = &$val;
+            $generic->$key = $val;
         }
 
         $this->stateObj = $generic;
@@ -31,9 +31,9 @@ class State extends stdClass implements JsonSerializable
     /**
      * Specify data which should be serialized to JSON
      * Serializes the object to a value that can be serialized natively by json_encode().
-     * @return State Returns data which can be serialized by json_encode(), which is a value of any type other than a resource .
+     * @return stdClass Returns data which can be serialized by json_encode(), which is a value of any type other than a resource .
      */
-    public function jsonSerialize()
+    public function jsonSerialize(): stdClass
     {
         return $this->stateObj;
     }
