@@ -1,0 +1,70 @@
+.Player {
+    color: whitesmoke;
+  }
+  
+  .entityStyle {
+    color: darkgoldenrod;
+  }
+
+  /*
+  turns out CSS animations are extremely, exceptionally taxing on a CPU.
+  While they look really, really good, they're literally crashing computers lol.
+  Maybe we should consider masking this with a gif? or maybe make the water transparent/low alpha 
+  and put a gif texture behind it? could give a cool aesthetic. something to ponder.
+  */
+  
+  .DeepWater {
+    color: rgb(0, 56, 139);
+    /*
+    mask-image: linear-gradient(-75deg, rgba(0, 0, 0, .3) 30%, #000 50%, rgba(0, 0, 0, .3) 70%);
+    mask-size: 200%;
+    -webkit-mask-image: linear-gradient(-75deg, rgba(0, 0, 0, .3) 30%, #000 50%, rgba(0, 0, 0, .3) 70%);
+    -webkit-mask-size: 200%;
+    animation: shine 12s linear infinite;
+    */
+    transform: rotateZ(360deg);  
+    will-change: transform  
+    }
+  
+  .Water {
+    color: rgb(0, 183, 255);
+    /*
+    mask-image: linear-gradient(-75deg, rgba(0, 0, 0, .3) 30%, #000 50%, rgba(0, 0, 0, .3) 70%);
+    mask-size: 200%;
+    -webkit-mask-image: linear-gradient(-75deg, rgba(0, 0, 0, .3) 30%, #000 50%, rgba(0, 0, 0, .3) 70%);
+    -webkit-mask-size: 200%;
+    animation: shine 8s linear infinite;
+    */
+    transform: rotateZ(360deg);  
+    will-change: transform  
+  }
+  
+  @keyframes shine {
+    from {
+      -webkit-mask-position: 100%;
+    }
+  
+    to {
+      -webkit-mask-position: -100%;
+    }
+  }
+  
+  .Shore {
+    color: rgb(255, 148, 41)
+  }
+  
+  .Grass {
+    color: rgb(0, 160, 27)
+  }
+  
+  .Slope {
+    color: rgb(255, 250, 197)
+  }
+  
+  .Mountain {
+    color: rgba(210, 235, 255, 0.692)
+  }
+  
+  .Wall {
+    color: rgb(255, 255, 255)
+  }

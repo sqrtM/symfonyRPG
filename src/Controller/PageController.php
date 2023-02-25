@@ -36,10 +36,20 @@ class PageController extends AbstractController
     #[Route('/game/{name}', name: 'game', methods: ['GET'])]
     public function game(string $name): Response
     {
-        $noiseGenerator = new NoiseGenerator();
+        $seedArray = [];
 
-        $width = 500;
-        $height = 500;
+        foreach (preg_split('//', $name, -1, PREG_SPLIT_NO_EMPTY) as $key => $val) {
+            array_push($seedArray, ord($val));
+        }
+
+        $seed = intval(implode($seedArray), 10);
+
+        print_r("seed = " . $seed);
+
+        $noiseGenerator = new NoiseGenerator($seed);
+
+        $width = 200;
+        $height = 200;
 
         $noiseArray = array_fill(0, $height, array_fill(0, $width, 0));
 
@@ -49,14 +59,34 @@ class PageController extends AbstractController
             }
         }
 
-        $testArray = array(
+        $gameState = [
             "name" => "name",
             "health" => 100,
-            "location" => array(floor($width / 2), floor($height / 2)),
+            //"location" => [(int) floor($width / 2), (int) floor($height / 2)],
+            "location" => array(15, 15),
             "map" => $noiseArray
-        );
+        ];
 
-        $state = new State($testArray);
+        $clientMap = [];
+        for ($row = $gameState["location"][0] - 15; $row < $gameState["location"][0] + 15; $row++) {
+            if ($row <= 0) {
+                /**
+                 * @psalm-suppress LoopInvalidation
+                 */
+                $row = 0;
+            } else if ($row > sizeof($noiseArray) - 1) {
+                $row = sizeof($noiseArray) - 1;
+            }
+            array_push($clientMap, array_slice($noiseArray[$row], $gameState["location"][0] - 15, 30));
+        }
+        /**
+         * @psalm-suppress ForbiddenCode
+         */
+        //print_r(var_dump($clientMap));
+
+        $gameState["map"] = $clientMap;
+
+        $state = new State($gameState);
 
         $stateJSON = $state->jsonSerialize();
 
