@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { tileGetter } from '../classes/tiles'
 
 import { GameState, MapInfo, Tile, TileName } from '../classes/enumsAndTypes'
+import axios from 'axios'
+import { LocationTuple } from '../../../build/main/react/classes/enumsAndTypes';
 
 /**
  * @todo —
@@ -15,18 +17,18 @@ import { GameState, MapInfo, Tile, TileName } from '../classes/enumsAndTypes'
  */
 export default function (props: GameState): JSX.Element {
   let tileMap: Tile<TileName>[][] = Array.from(
-    { length: props.state.map.length },
+    { length: props.map.length },
     () =>
-      Array.from({ length: props.state.map[0].length }, () =>
+      Array.from({ length: props.map[0].length }, () =>
         tileGetter.get(TileName.Grass, [0, 0]),
       ),
   )
 
   useEffect(() => {
-    props.state.map.forEach((i: MapInfo[], index: number) => {
+    props.map.forEach((i: MapInfo[], index: number) => {
       i.map((j: MapInfo, jndex: number) => {
-        let locY = props.state.map[index][jndex].location.y
-        let locX = props.state.map[index][jndex].location.x
+        let locY = props.map[index][jndex].location.y
+        let locX = props.map[index][jndex].location.x
         switch (true) {
           case j.noiseValue >= 0.6:
             tileMap[index][jndex] = tileGetter.get(TileName.Wall, [locY, locX])
@@ -58,11 +60,15 @@ export default function (props: GameState): JSX.Element {
         }
       })
     })
-  }, [props.state.map])
+  }, [props.map])
+
+  function grabNewScreen(location: LocationTuple) {
+    axios.post('http://127.0.0.1:8000/game/api/' + props.state.name, {location: location}).then(res => console.log(res.data))
+  }
 
   return (
     <>
-      <GameMap map={tileMap} location={props.state.location} />
+      <GameMap map={tileMap} location={props.state.location} grabNewScreen={grabNewScreen} topLeft = {props.map[0][0].location.x} bottomRight = {props.map[props.map.length - 1][props.map[0].length - 1].location.y}/>
     </>
   )
 }

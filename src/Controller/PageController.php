@@ -6,6 +6,7 @@ use App\Entity\DatabaseConnectionCredentials;
 use App\Entity\State;
 use App\NoiseGenerator\NoiseGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -44,6 +45,10 @@ class PageController extends AbstractController
         return $this->render('hello.html.twig', []);
     }
 
+    /**
+     * this function is becoming obscenely unruly. 
+     * Split this up into smaller functions and classes.
+     */
     #[Route('/game/{name}', name: 'game', methods: ['GET'])]
     public function game(string $name): Response
     {
@@ -60,12 +65,18 @@ class PageController extends AbstractController
 
         if ($playerExists) {
             print_r("welcome back");
-            $postgresArray = json_decode(pg_fetch_all($results)[0]["state"], true);
+            $postgresStateArray = json_decode(pg_fetch_all($results)[0]["state"], true);
+            $postgresMapArray = json_decode(pg_fetch_all($results)[0]["map"], true);
             $gameState = [
-                "name" => $postgresArray["name"],
-                "health" => $postgresArray["health"],
-                "location" => $postgresArray["location"],
-                "map" => $postgresArray["map"]
+                "name" => $postgresStateArray["name"],
+                "health" => $postgresStateArray["health"],
+                "location" => $postgresStateArray["location"],
+                //"map" => $postgresArray["map"]
+            ];
+
+            $gameMaps = [
+                "fullMap" => $postgresMapArray,
+                "clientMap" => []
             ];
         } else {
             print_r("welcome new player");
@@ -98,32 +109,34 @@ class PageController extends AbstractController
                 "name" => $name,
                 "health" => 100,
                 "location" => [(int) floor($mapWidth / 2), (int) floor($mapHeight / 2)],
-                "map" => $noiseArray
+                //"map" => $noiseArray
+            ];
+
+            $gameMaps = [
+                "fullMap" => $noiseArray,
+                "clientMap" => []
             ];
 
             $state = new State($gameState);
 
             $stateJSON = $state->jsonSerialize();
 
-            pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state) VALUES ($1, $2);");
-            pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON)])
+            pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state, map) VALUES ($1, $2, $3);");
+            pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON), json_encode($gameMaps["fullMap"])])
                 or die('Query failed: ' . pg_last_error());
         }
 
-        $clientMap = [];
         for ($row = $gameState["location"][0] - (int) floor($gameWindowWidth / 2); $row < $gameState["location"][0] + (int) floor($gameWindowWidth / 2); $row++) {
             if ($row < 0) {
                 /**
                  * @psalm-suppress LoopInvalidation
                  */
                 $row = 0;
-            } else if ($row > sizeof($gameState["map"]) - 1) {
-                $row = sizeof($gameState["map"]) - 1;
+            } else if ($row > sizeof($gameMaps["fullMap"]) - 1) {
+                $row = sizeof($gameMaps["fullMap"]) - 1;
             }
-            array_push($clientMap, array_slice($gameState["map"][$row], $gameState["location"][0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
+            array_push($gameMaps["clientMap"], array_slice($gameMaps["fullMap"][$row], $gameState["location"][0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
         }
-
-        $gameState["map"] = $clientMap;
 
         $state = new State($gameState);
 
@@ -133,6 +146,49 @@ class PageController extends AbstractController
         unset($con);
         unset($con_login);
 
-        return $this->render('game.html.twig', ["state" => $stateJSON]);
+        return $this->render('game.html.twig', ["state" => $stateJSON, "map" => $gameMaps["clientMap"]]);
+    }
+
+    #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
+    public function getNewScreen(string $name, Request $request): Response 
+    {
+        $incoming_location = json_decode($request->getContent())->{'location'};
+
+        $con_login = $this->init_env();
+
+        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
+            or die("Could not connect to server\n");
+
+        $query = "SELECT * FROM games WHERE name = '{$name}';";
+        $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
+
+        $postgresResults = pg_fetch_all($results)[0];
+        $decodedPostgresState = json_decode($postgresResults["state"]);
+        $decodedPostgresMap = json_decode($postgresResults["map"]);
+        $clientArray = [];
+
+
+        $gameWindowWidth = 30;
+
+        /**
+         * Ideally, this will give us back the thirty tiles which currently surround the player, AND/OR the thirty to the direction of the player. 
+         * Right now, it just gives the same thirty each time. I'm not entirely sure why that is. Investigate the LOCATION variable in GameMap.tsx. 
+         * Afterwards, vardump the variables here. I think that $incoming_location is correct, so it's strange that this isn't working as intended.
+         */
+
+        for ($row = $incoming_location[0] - (int) floor($gameWindowWidth / 2); $row < $incoming_location[0] + (int) floor($gameWindowWidth / 2); $row++) {
+            if ($row < 0) {
+                /**
+                 * @psalm-suppress LoopInvalidation
+                 */
+                $row = 0;
+            } else if ($row > sizeof($decodedPostgresMap) - 1) {
+                $row = sizeof($decodedPostgresMap) - 1;
+            }
+            array_push($clientArray, array_slice($decodedPostgresMap[$row], $incoming_location[0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
+        }
+
+
+        return new Response(json_encode($clientArray));
     }
 }

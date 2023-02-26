@@ -8,11 +8,11 @@ export type MapInfo = {location: {y: number, x: number}, noiseValue: number}
 
 export type GameState = {
   state: {
-    map: MapInfo[][]
     name: string
     health: number
     location: LocationTuple
   }
+  map: MapInfo[][]
 }
 
 export class Tile<TileName> {
