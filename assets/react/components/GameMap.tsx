@@ -17,19 +17,15 @@ export default function (props: MapState): JSX.Element {
     switch (e.key) {
       case 'ArrowUp':
         setLocation([(location[0] -= 1), location[1]])
-        console.log(location)
         break
       case 'ArrowDown':
         setLocation([(location[0] += 1), location[1]])
-        console.log(location)
         break
       case 'ArrowRight':
         setLocation([location[0], (location[1] += 1)])
-        console.log(location)
         break
       case 'ArrowLeft':
         setLocation([location[0], (location[1] -= 1)])
-        console.log(location)
         break
       default:
         break
@@ -59,7 +55,7 @@ export default function (props: MapState): JSX.Element {
                 <TileSpan
                   tileKey={`key-${xCoord}-tile`}
                   isPlayerHere={
-                    location[0] === yCoord && location[1] === xCoord
+                    location[0] === tile.properties.location[0] && location[1] === tile.properties.location[1]
                   }
                   tile={tile}
 

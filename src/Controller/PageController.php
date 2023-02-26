@@ -50,25 +50,28 @@ class PageController extends AbstractController
 
         $width = 200;
         $height = 200;
-
-        $noiseArray = array_fill(0, $height, array_fill(0, $width, 0));
+        $noiseArray = array_fill(0, $height, array_fill(0, $width, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0]));
 
         for ($i = 0; $i < $height; $i++) {
             for ($j = 0; $j < $width; $j++) {
-                $noiseArray[$i][$j] += $noiseGenerator->random2D($i / $width * ($width >> 4), $j / $height * ($height >> 4));
+                $noiseArray[$i][$j]["noiseValue"] += $noiseGenerator->random2D($i / $width * ($width >> 4), $j / $height * ($height >> 4));
+                $noiseArray[$i][$j]["location"]["y"] = $i;
+                $noiseArray[$i][$j]["location"]["x"] = $j;
             }
         }
 
         $gameState = [
             "name" => "name",
             "health" => 100,
-            //"location" => [(int) floor($width / 2), (int) floor($height / 2)],
-            "location" => array(15, 15),
+            "location" => [(int) floor($width / 2), (int) floor($height / 2)],
+            //"location" => array(65, 44),
             "map" => $noiseArray
         ];
 
+        $gameWindowWidth = 30;
+
         $clientMap = [];
-        for ($row = $gameState["location"][0] - 15; $row < $gameState["location"][0] + 15; $row++) {
+        for ($row = $gameState["location"][0] - (int) floor($gameWindowWidth / 2); $row < $gameState["location"][0] + (int) floor($gameWindowWidth / 2); $row++) {
             if ($row <= 0) {
                 /**
                  * @psalm-suppress LoopInvalidation
@@ -77,12 +80,8 @@ class PageController extends AbstractController
             } else if ($row > sizeof($noiseArray) - 1) {
                 $row = sizeof($noiseArray) - 1;
             }
-            array_push($clientMap, array_slice($noiseArray[$row], $gameState["location"][0] - 15, 30));
+            array_push($clientMap, array_slice($noiseArray[$row], $gameState["location"][0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
         }
-        /**
-         * @psalm-suppress ForbiddenCode
-         */
-        //print_r(var_dump($clientMap));
 
         $gameState["map"] = $clientMap;
 

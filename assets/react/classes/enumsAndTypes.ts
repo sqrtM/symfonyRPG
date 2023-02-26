@@ -4,9 +4,11 @@
  */
 export type LocationTuple = [y: number, x: number]
 
+export type MapInfo = {location: {y: number, x: number}, noiseValue: number}
+
 export type GameState = {
   state: {
-    map: number[][];
+    map: MapInfo[][]
     name: string
     health: number
     location: LocationTuple
@@ -20,8 +22,10 @@ export class Tile<TileName> {
   visuals!: TileVisuals<TileName>
   contents?: Entity[]
 
-  constructor(i: Tile<TileName>) {
+  constructor(i: Tile<TileName>, location: LocationTuple) {
     Object.assign(this, i);
+    this.properties.location[0] = location[0]
+    this.properties.location[1] = location[1]
   }
 }
 
@@ -67,6 +71,7 @@ export type TileProperties<Name> = {
   speedMod: number,
   walkable: boolean,
   flavorText: string
+  location: LocationTuple
 }
 
 export type TileVisuals<Name> = {
