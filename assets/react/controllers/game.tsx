@@ -1,74 +1,123 @@
-import * as React from 'react'
-import GameMap from '../components/GameMap'
-import { useEffect } from 'react'
-import { tileGetter } from '../classes/tiles'
+import * as React from "react";
+import GameMap from "../components/GameMap";
+import { useEffect, useState } from "react";
+import { tileGetter } from "../classes/tiles";
 
-import { GameState, MapInfo, Tile, TileName } from '../classes/enumsAndTypes'
-import axios from 'axios'
-import { LocationTuple } from '../../../build/main/react/classes/enumsAndTypes';
+import {
+  GameState,
+  LocationTuple,
+  MapInfo,
+  Tile,
+  TileName,
+} from "../classes/enumsAndTypes";
+import axios from "axios";
 
 /**
- * @todo —
- * 1.) presently, the array being sent from the @PageController.php is
- * sending an array for the map, but in the process it loses its order.
- * What we probably want to do is make each element of the array have TWO
- * distinct members : the noise value as well as a "location" array.
- * Every entity in the game can hold this "origin" duple.
+ * @todo — IF THIS DOESN'T WORK, SIGN IN WITH USER "bbb".
  */
 export default function (props: GameState): JSX.Element {
-  let tileMap: Tile<TileName>[][] = Array.from(
-    { length: props.map.length },
-    () =>
-      Array.from({ length: props.map[0].length }, () =>
-        tileGetter.get(TileName.Grass, [0, 0]),
-      ),
-  )
+  const [currentMap, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
+  const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
+    props.state.location
+  );
 
-  useEffect(() => {
-    props.map.forEach((i: MapInfo[], index: number) => {
+  function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
+    let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
+      Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
+    );
+    noiseArray.forEach((i: MapInfo[], index: number) => {
       i.map((j: MapInfo, jndex: number) => {
-        let locY = props.map[index][jndex].location.y
-        let locX = props.map[index][jndex].location.x
         switch (true) {
           case j.noiseValue >= 0.6:
-            tileMap[index][jndex] = tileGetter.get(TileName.Wall, [locY, locX])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.Wall, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
           case j.noiseValue >= 0.25:
-            tileMap[index][jndex] = tileGetter.get(TileName.Mountain, [
-              locY,
-              locX,
-            ])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.Mountain, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
           case j.noiseValue >= 0.2:
-            tileMap[index][jndex] = tileGetter.get(TileName.Slope, [locY, locX])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.Slope, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
           case j.noiseValue >= 0:
-            tileMap[index][jndex] = tileGetter.get(TileName.Grass, [locY, locX])
-            break
-          case j.noiseValue >= -0.4:
-            tileMap[index][jndex] = tileGetter.get(TileName.Shore, [locY, locX])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.Grass, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
+          case j.noiseValue >= -0.25:
+            newTileMap[index][jndex] = tileGetter.get(TileName.Shore, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
           case j.noiseValue >= -0.6:
-            tileMap[index][jndex] = tileGetter.get(TileName.Water, [locY, locX])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.Water, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
           default:
-            tileMap[index][jndex] = tileGetter.get(TileName.DeepWater, [
-              locY,
-              locX,
-            ])
-            break
+            newTileMap[index][jndex] = tileGetter.get(TileName.DeepWater, [
+              j.location.y,
+              j.location.x,
+            ]);
+            break;
         }
-      })
-    })
-  }, [props.map])
+      });
+    });
+    return newTileMap;
+  }
 
-  function grabNewScreen(location: LocationTuple) {
-    axios.post('http://127.0.0.1:8000/game/api/' + props.state.name, {location: location}).then(res => console.log(res.data))
+  useEffect(() => {
+    grabFirstScreen(props.state.screen);
+  }, []);
+
+  function grabNewScreen(location: LocationTuple, direction: string) {
+    axios
+      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
+        location: location,
+        leftFrom: direction,
+      })
+      .then((res) => {
+        let tileMap = noiseToTile(res.data);
+        setCurrentScreen(tileMap);
+        setCurrentLocation(location);
+      });
+  }
+
+  function grabFirstScreen(screen: number) {
+    axios
+      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
+        screen: screen,
+      })
+      .then((res) => {
+        console.log(res.data);
+        console.log(currentLocation);
+        let tileMap = noiseToTile(res.data);
+        setCurrentScreen(tileMap);
+      });
   }
 
   return (
     <>
-      <GameMap map={tileMap} location={props.state.location} grabNewScreen={grabNewScreen} topLeft = {props.map[0][0].location.x} bottomRight = {props.map[props.map.length - 1][props.map[0].length - 1].location.y}/>
+      <GameMap
+        map={currentMap}
+        location={currentLocation}
+        grabNewScreen={grabNewScreen}
+        topLeft={0/*currentMap[0][0].properties.location[1]*/}
+        bottomRight={1000/*
+          currentMap[currentMap.length - 1][currentMap[0].length - 1].properties
+            .location[0]
+  */}
+      />
     </>
-  )
+  );
 }

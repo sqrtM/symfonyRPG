@@ -21,22 +21,22 @@ export default function (props: MapState): JSX.Element {
       case "ArrowUp":
         location[0] > props.topLeft
           ? setLocation([(location[0] -= 1), location[1]])
-          : props.grabNewScreen(location);
+          : props.grabNewScreen(location, "TOP");
         break;
       case "ArrowDown":
         location[0] < props.bottomRight
           ? setLocation([(location[0] += 1), location[1]])
-          : props.grabNewScreen(location);
+          : props.grabNewScreen(location, "BOTTOM");
         break;
       case "ArrowRight":
         location[1] < props.bottomRight
           ? setLocation([location[0], (location[1] += 1)])
-          : props.grabNewScreen(location);
+          : props.grabNewScreen(location, "RIGHT");
         break;
       case "ArrowLeft":
         location[1] > props.topLeft
           ? setLocation([location[0], (location[1] -= 1)])
-          : props.grabNewScreen(location);
+          : props.grabNewScreen(location, "LEFT");
         break;
       default:
         break;

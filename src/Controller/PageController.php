@@ -61,7 +61,6 @@ class PageController extends AbstractController
         $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
         $playerExists = count(pg_fetch_all($results)) > 0 ? true : false;
 
-        $gameWindowWidth = 30;
 
         if ($playerExists) {
             print_r("welcome back");
@@ -71,12 +70,11 @@ class PageController extends AbstractController
                 "name" => $postgresStateArray["name"],
                 "health" => $postgresStateArray["health"],
                 "location" => $postgresStateArray["location"],
-                //"map" => $postgresArray["map"]
+                "screen" => $postgresStateArray["screen"],
             ];
 
             $gameMaps = [
-                "fullMap" => $postgresMapArray,
-                "clientMap" => []
+                "screensArray" => $postgresMapArray,
             ];
         } else {
             print_r("welcome new player");
@@ -92,8 +90,8 @@ class PageController extends AbstractController
 
             $noiseGenerator = new NoiseGenerator($seed);
 
-            $mapWidth = 200;
-            $mapHeight = 200;
+            $mapWidth = 300;
+            $mapHeight = 300;
 
             $noiseArray = array_fill(0, $mapHeight, array_fill(0, $mapWidth, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0]));
 
@@ -108,13 +106,35 @@ class PageController extends AbstractController
             $gameState = [
                 "name" => $name,
                 "health" => 100,
-                "location" => [(int) floor($mapWidth / 2), (int) floor($mapHeight / 2)],
-                //"map" => $noiseArray
+                //"location" => [(int) floor($mapWidth / 2), (int) floor($mapHeight / 2)],
+                "location" => [15, 15],
+                "screen" => 0
             ];
 
+            $numberOfScreens = 10;
+            /**
+             * this splits a large array into $numberOfScreens sections.
+             * we can then hold this info in postgres and, instead of calculating these in real time,
+             * we can just have the player hold the 9 screens around them and request screens as they approach them,
+             * kind of like how fog of war works in older games.
+             */
+            $screensArray = [];
+            for ($yCoordMiddle = ($mapHeight / $numberOfScreens) / 2; $yCoordMiddle <= $mapHeight * 0.99; $yCoordMiddle += $mapHeight / $numberOfScreens) {
+                for ($xCoordMiddle = ($mapWidth / $numberOfScreens) / 2; $xCoordMiddle <= $mapWidth * 0.99; $xCoordMiddle += $mapWidth / $numberOfScreens) {
+                    $screen = [];
+                    for ($i = $yCoordMiddle - (($mapHeight / $numberOfScreens) / 2); $i < ($yCoordMiddle + ($mapHeight / $numberOfScreens) / 2); $i++) {
+                        $screenRow = [];
+                        for ($j = $xCoordMiddle - (($mapWidth / $numberOfScreens) / 2); $j < ($xCoordMiddle + ($mapWidth / $numberOfScreens) / 2); $j++) {
+                            array_push($screenRow, $noiseArray[$i][$j]);
+                        }
+                        array_push($screen, $screenRow);
+                    }
+                    array_push($screensArray, $screen);
+                }
+            }
+
             $gameMaps = [
-                "fullMap" => $noiseArray,
-                "clientMap" => []
+                "screensArray" => $screensArray
             ];
 
             $state = new State($gameState);
@@ -122,20 +142,8 @@ class PageController extends AbstractController
             $stateJSON = $state->jsonSerialize();
 
             pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state, map) VALUES ($1, $2, $3);");
-            pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON), json_encode($gameMaps["fullMap"])])
+            pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON) /*, json_encode($gameMaps["screensArray"])*/])
                 or die('Query failed: ' . pg_last_error());
-        }
-
-        for ($row = $gameState["location"][0] - (int) floor($gameWindowWidth / 2); $row < $gameState["location"][0] + (int) floor($gameWindowWidth / 2); $row++) {
-            if ($row < 0) {
-                /**
-                 * @psalm-suppress LoopInvalidation
-                 */
-                $row = 0;
-            } else if ($row > sizeof($gameMaps["fullMap"]) - 1) {
-                $row = sizeof($gameMaps["fullMap"]) - 1;
-            }
-            array_push($gameMaps["clientMap"], array_slice($gameMaps["fullMap"][$row], $gameState["location"][0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
         }
 
         $state = new State($gameState);
@@ -146,13 +154,15 @@ class PageController extends AbstractController
         unset($con);
         unset($con_login);
 
-        return $this->render('game.html.twig', ["state" => $stateJSON, "map" => $gameMaps["clientMap"]]);
+        return $this->render('game.html.twig', ["state" => $stateJSON, "map" => $gameMaps["screensArray"]]);
     }
 
+    /*
     #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
-    public function getNewScreen(string $name, Request $request): Response 
+    public function getNewScreen(string $name, Request $request): Response
     {
         $incoming_location = json_decode($request->getContent())->{'location'};
+        $leftFrom = json_decode($request->getContent())->{'direction'};
 
         $con_login = $this->init_env();
 
@@ -163,32 +173,35 @@ class PageController extends AbstractController
         $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
 
         $postgresResults = pg_fetch_all($results)[0];
-        $decodedPostgresState = json_decode($postgresResults["state"]);
+        //$decodedPostgresState = json_decode($postgresResults["state"]);
         $decodedPostgresMap = json_decode($postgresResults["map"]);
-        $clientArray = [];
+        pg_close($con);
+        unset($con);
+        unset($con_login);
 
+        return new Response(json_encode($leftFrom));
+    }
+    */
 
-        $gameWindowWidth = 30;
+    #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
+    public function getFirstScreen(string $name, Request $request): Response
+    {
+        $incoming_screen = json_decode($request->getContent())->{'screen'};
 
-        /**
-         * Ideally, this will give us back the thirty tiles which currently surround the player, AND/OR the thirty to the direction of the player. 
-         * Right now, it just gives the same thirty each time. I'm not entirely sure why that is. Investigate the LOCATION variable in GameMap.tsx. 
-         * Afterwards, vardump the variables here. I think that $incoming_location is correct, so it's strange that this isn't working as intended.
-         */
+        $con_login = $this->init_env();
 
-        for ($row = $incoming_location[0] - (int) floor($gameWindowWidth / 2); $row < $incoming_location[0] + (int) floor($gameWindowWidth / 2); $row++) {
-            if ($row < 0) {
-                /**
-                 * @psalm-suppress LoopInvalidation
-                 */
-                $row = 0;
-            } else if ($row > sizeof($decodedPostgresMap) - 1) {
-                $row = sizeof($decodedPostgresMap) - 1;
-            }
-            array_push($clientArray, array_slice($decodedPostgresMap[$row], $incoming_location[0] - (int) floor($gameWindowWidth / 2), $gameWindowWidth));
-        }
+        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
+            or die("Could not connect to server\n");
 
+        $query = "SELECT * FROM games WHERE name = '{$name}';";
+        $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
 
-        return new Response(json_encode($clientArray));
+        $postgresResults = pg_fetch_all($results)[0];
+        $decodedPostgresMap = json_decode($postgresResults["map"])[$incoming_screen];
+        pg_close($con);
+        unset($con);
+        unset($con_login);
+
+        return new Response(json_encode($decodedPostgresMap));
     }
 }
