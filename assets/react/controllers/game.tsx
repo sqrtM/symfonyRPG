@@ -76,31 +76,32 @@ export default function (props: GameState): JSX.Element {
     return newTileMap;
   }
 
+  const screenIndex = +(Math.floor(currentLocation[0] / 30).toString() + Math.floor(currentLocation[1] / 30).toString())
+
   useEffect(() => {
-    grabFirstScreen(props.state.screen);
+    grabFirstScreen();
+    console.log(screenIndex)
   }, []);
 
-  function grabNewScreen(location: LocationTuple, direction: string) {
+  function grabNewScreen(location: LocationTuple) {
+    const screenIndex = +(Math.floor(location[0] / 30).toString() + Math.floor(location[1] / 30).toString())
+    setCurrentLocation(location)
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-        location: location,
-        leftFrom: direction,
+        screen: screenIndex,
       })
       .then((res) => {
         let tileMap = noiseToTile(res.data);
         setCurrentScreen(tileMap);
-        setCurrentLocation(location);
       });
   }
 
-  function grabFirstScreen(screen: number) {
+  function grabFirstScreen() {
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-        screen: screen,
+        screen: screenIndex,
       })
       .then((res) => {
-        console.log(res.data);
-        console.log(currentLocation);
         let tileMap = noiseToTile(res.data);
         setCurrentScreen(tileMap);
       });
@@ -112,11 +113,6 @@ export default function (props: GameState): JSX.Element {
         map={currentMap}
         location={currentLocation}
         grabNewScreen={grabNewScreen}
-        topLeft={0/*currentMap[0][0].properties.location[1]*/}
-        bottomRight={1000/*
-          currentMap[currentMap.length - 1][currentMap[0].length - 1].properties
-            .location[0]
-  */}
       />
     </>
   );
