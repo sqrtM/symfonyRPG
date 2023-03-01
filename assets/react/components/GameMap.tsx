@@ -12,41 +12,56 @@ export type MapState = {
 export default function (props: MapState): JSX.Element {
   /**
    * perhaps this shouldn't be a "state" thing until we switch scenes.
-   * it's causing re-renders. 
+   * it's causing re-renders.
    */
   const [location, setLocation] = useState<LocationTuple>(props.location);
-
 
   const keyListener = (e: KeyboardEvent): void => {
     // for some reason, writing a unary "--" creates a very different
     // interaction than "-= 1". Weird.
 
-    //RIGHT AND UP DO NOT WORK ACROSS SCREENS ???? 
-    //FIX THE LAMBDAS IM CERTAIN THATS THE PROBLEM... 
+    //RIGHT AND UP DO NOT WORK ACROSS SCREENS ????
+    //FIX THE LAMBDAS IM CERTAIN THATS THE PROBLEM...
     switch (e.key) {
       case "ArrowUp":
-        setLocation([(location[0] -= 1), location[1]])
-        location[0] > Math.floor(location[1] / 30) * 30// topleft
-          ? console.log(Math.floor(location[1] / 30) * 30, location)
+        setLocation([(location[0] -= 1), location[1]]);
+        location[0] > Math.floor(location[0] / 30) * 30 // topleft
+          ? console.log(
+              "up ",
+              location[0],
+              Math.floor(location[0] / 30) * 30,
+            )
           : props.grabNewScreen(location);
         break;
       case "ArrowDown":
-        setLocation([(location[0] += 1), location[1]])
-        location[0] < (Math.ceil(location[0] / 30) * 30) - 1 // bottom right
-          ? console.log((Math.ceil(location[0] / 30) * 30) - 1, location)
+        setLocation([(location[0] += 1), location[1]]);
+        location[0] < Math.ceil(location[0] / 30) * 30 - 1 // bottom right
+          ? console.log(
+              "down ",
+              location[0],
+              Math.ceil(location[0] / 30) * 30 - 1
+            )
           : props.grabNewScreen(location);
         break;
       case "ArrowRight":
-        setLocation([location[0], (location[1] += 1)])
-        location[1] < (Math.ceil(location[0] / 30) * 30) - 1 // bottom right
-          ? console.log((Math.ceil(location[0] / 30) * 30) - 1, location)
+        setLocation([location[0], (location[1] += 1)]);
+        location[1] < Math.ceil(location[1] / 30) * 30 - 1 // bottom right
+          ? console.log(
+              "right ",
+              location[1],
+              Math.ceil(location[1] / 30) * 30 - 1,
+            )
           : props.grabNewScreen(location);
         break;
       case "ArrowLeft":
-        setLocation([location[0], (location[1] -= 1)])
+        setLocation([location[0], (location[1] -= 1)]);
         location[1] > Math.floor(location[1] / 30) * 30 // top left
-          ? console.log(Math.floor(location[1] / 30) * 30, location)
-          : props.grabNewScreen(location,);
+          ? console.log(
+              "left ",
+              location[1],
+              Math.floor(location[1] / 30) * 30,
+            )
+          : props.grabNewScreen(location);
         break;
       default:
         break;

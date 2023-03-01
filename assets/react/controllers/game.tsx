@@ -20,6 +20,7 @@ export default function (props: GameState): JSX.Element {
   const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
     props.state.location
   );
+  const [loading, setLoading] = useState<Boolean>(false);
 
   function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
     let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
@@ -84,6 +85,7 @@ export default function (props: GameState): JSX.Element {
   }, []);
 
   function grabNewScreen(location: LocationTuple) {
+    setLoading(true)
     const screenIndex = +(Math.floor(location[0] / 30).toString() + Math.floor(location[1] / 30).toString())
     setCurrentLocation(location)
     axios
@@ -94,9 +96,14 @@ export default function (props: GameState): JSX.Element {
         let tileMap = noiseToTile(res.data);
         setCurrentScreen(tileMap);
       });
+      setLoading(false)
   }
 
+  /**
+   * phase this function out so we only need @grabNewScreen instead of this one
+   */
   function grabFirstScreen() {
+    setLoading(true)
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
         screen: screenIndex,
@@ -105,9 +112,10 @@ export default function (props: GameState): JSX.Element {
         let tileMap = noiseToTile(res.data);
         setCurrentScreen(tileMap);
       });
+      setLoading(false)
   }
 
-  return (
+  return loading ? <>loading...</> : (
     <>
       <GameMap
         map={currentMap}
