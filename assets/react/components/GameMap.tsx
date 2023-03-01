@@ -18,18 +18,23 @@ export default function (props: MapState): JSX.Element {
   const [location, setLocation] = useState<LocationTuple>(props.location);
   const [loading, setLoading] = useState<Boolean>(true);
 
-
+  /**
+   * left and up lambdas is broken. they dont move the screen properly.
+   * 
+   * original : 
+   * location[0] > (Math.floor(location[0] / 30) * 30) - 1 // topleft
+   */
   const keyListener = (e: KeyboardEvent): void => {
     // for some reason, writing a unary "--" creates a very different
     // interaction than "-= 1". Weird.
     switch (e.key) {
       case "ArrowUp":
         setLocation([(location[0] -= 1), location[1]]);
-        location[0] > (Math.floor(location[0] / 30) * 30) - 1 // topleft
+        location[0] ===  Math.floor(location[0] / 30) * 30 - 29// topleft
           ? console.log(
               "up ",
               location[0],
-              (Math.floor(location[0] / 30) * 30) - 1,
+              Math.ceil(location[0] / 30) * 30,
             )
           : props.grabNewScreen(location);
         break;
@@ -55,11 +60,11 @@ export default function (props: MapState): JSX.Element {
         break;
       case "ArrowLeft":
         setLocation([location[0], (location[1] -= 1)]);
-        location[1] > (Math.floor(location[0] / 30) * 30) - 1 // top left
+        location[1] >= (Math.floor(location[1] / 30) * 30) // top left
           ? console.log(
               "left ",
               location[1],
-              (Math.floor(location[0] / 30) * 30) - 1,
+              (Math.floor(location[1] / 30) * 30),
             )
           : props.grabNewScreen(location);
         break;
@@ -71,7 +76,7 @@ export default function (props: MapState): JSX.Element {
   useEffect(() => {
     setTimeout(() => {
       setLoading(false)
-    }, 3000);
+    }, 400);
     window.addEventListener("keydown", keyListener);
     return () => {
       window.removeEventListener("keydown", keyListener);

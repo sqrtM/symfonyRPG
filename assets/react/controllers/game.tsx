@@ -21,9 +21,10 @@ export default function (props: GameState): JSX.Element {
   const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
     props.state.location
   );
-  const [tileSelect, setTileSelect] = useState<Tile<TileName> | null>(null)
+  const [tileSelect, setTileSelect] = useState<Tile<TileName> | null>(null);
 
   function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
+    console.log(noiseArray);
     let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
       Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
     );
@@ -83,20 +84,24 @@ export default function (props: GameState): JSX.Element {
   }, []);
 
   function grabNewScreen(location: LocationTuple) {
-    const screenIndex = +(Math.floor(location[0] / 30).toString() + Math.floor(location[1] / 30).toString())
-    setCurrentLocation(location)
+    const screenIndex = +(
+      Math.floor(location[0] / 30).toString() +
+      Math.floor(location[1] / 30).toString()
+    );
+    setCurrentLocation(location);
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
         screen: screenIndex,
       })
       .then((res) => {
-        let tileMap = noiseToTile(res.data);
+        let jsonData = JSON.parse(res.data)
+        let tileMap = noiseToTile(jsonData);
         setCurrentScreen(tileMap);
       });
   }
 
   function mapHover(tile: Tile<TileName>) {
-    setTileSelect(tile)
+    setTileSelect(tile);
   }
 
   return (
@@ -107,10 +112,7 @@ export default function (props: GameState): JSX.Element {
         grabNewScreen={grabNewScreen}
         mapHover={mapHover}
       />
-      <SideBar 
-        state={props.state}
-        selectedTile={tileSelect}
-      />
+      <SideBar state={props.state} selectedTile={tileSelect} />
     </div>
   );
 }
