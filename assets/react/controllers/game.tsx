@@ -11,6 +11,7 @@ import {
   TileName,
 } from "../classes/enumsAndTypes";
 import axios from "axios";
+import SideBar from "../components/SideBar";
 
 /**
  * @todo — IF THIS DOESN'T WORK, SIGN IN WITH USER "bbb".
@@ -20,7 +21,7 @@ export default function (props: GameState): JSX.Element {
   const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
     props.state.location
   );
-  const [loading, setLoading] = useState<Boolean>(false);
+  const [tileSelect, setTileSelect] = useState<Tile<TileName> | null>(null)
 
   function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
     let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
@@ -29,19 +30,19 @@ export default function (props: GameState): JSX.Element {
     noiseArray.forEach((i: MapInfo[], index: number) => {
       i.map((j: MapInfo, jndex: number) => {
         switch (true) {
-          case j.noiseValue >= 0.6:
+          case j.noiseValue >= 0.75:
             newTileMap[index][jndex] = tileGetter.get(TileName.Wall, [
               j.location.y,
               j.location.x,
             ]);
             break;
-          case j.noiseValue >= 0.25:
+          case j.noiseValue >= 0.4:
             newTileMap[index][jndex] = tileGetter.get(TileName.Mountain, [
               j.location.y,
               j.location.x,
             ]);
             break;
-          case j.noiseValue >= 0.2:
+          case j.noiseValue >= 0.3:
             newTileMap[index][jndex] = tileGetter.get(TileName.Slope, [
               j.location.y,
               j.location.x,
@@ -77,15 +78,11 @@ export default function (props: GameState): JSX.Element {
     return newTileMap;
   }
 
-  const screenIndex = +(Math.floor(currentLocation[0] / 30).toString() + Math.floor(currentLocation[1] / 30).toString())
-
   useEffect(() => {
-    grabFirstScreen();
-    console.log(screenIndex)
+    grabNewScreen(currentLocation);
   }, []);
 
   function grabNewScreen(location: LocationTuple) {
-    setLoading(true)
     const screenIndex = +(Math.floor(location[0] / 30).toString() + Math.floor(location[1] / 30).toString())
     setCurrentLocation(location)
     axios
@@ -96,32 +93,24 @@ export default function (props: GameState): JSX.Element {
         let tileMap = noiseToTile(res.data);
         setCurrentScreen(tileMap);
       });
-      setLoading(false)
   }
 
-  /**
-   * phase this function out so we only need @grabNewScreen instead of this one
-   */
-  function grabFirstScreen() {
-    setLoading(true)
-    axios
-      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-        screen: screenIndex,
-      })
-      .then((res) => {
-        let tileMap = noiseToTile(res.data);
-        setCurrentScreen(tileMap);
-      });
-      setLoading(false)
+  function mapHover(tile: Tile<TileName>) {
+    setTileSelect(tile)
   }
 
-  return loading ? <>loading...</> : (
-    <>
+  return (
+    <div id="game-container">
       <GameMap
         map={currentMap}
         location={currentLocation}
         grabNewScreen={grabNewScreen}
+        mapHover={mapHover}
       />
-    </>
+      <SideBar 
+        state={props.state}
+        selectedTile={tileSelect}
+      />
+    </div>
   );
 }

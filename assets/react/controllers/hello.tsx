@@ -58,7 +58,7 @@ import { useState } from 'react';
  */
 export default function (): JSX.Element {
   function handleClick() {
-    confirm('beginning adventure')
+    confirm('beginning adventure. if youre making a new character this will take a few seconds...')
   }
 
   const [name, setName] = useState("");

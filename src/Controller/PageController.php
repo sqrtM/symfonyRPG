@@ -12,8 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
- * NEW PLAYERS DONT WORK AGAIN.
- * ALWAYS USE bbb FOR DEFAULT.
+ * 
  * 
  * Idea is that you send the state to the player when they load the game
  * So you search the DB for the username, if it doesn't come up just init a 
@@ -41,7 +40,7 @@ class PageController extends AbstractController
     }
 
     #[Route('/game/{name}/new', name: 'createNewGame', methods: ['GET'])]
-    public function createNewGame(string $name): Response
+    public function createNewGame(string $name): RedirectResponse
     {
 
         $con_login = $this->init_env();
@@ -49,7 +48,6 @@ class PageController extends AbstractController
         $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
             or die("Could not connect to server\n");
 
-        print_r("welcome new player");
         $seedArray = [];
 
         foreach (preg_split('//', $name, -1, PREG_SPLIT_NO_EMPTY) as $key => $val) {
@@ -78,7 +76,6 @@ class PageController extends AbstractController
         $gameState = [
             "name" => $name,
             "health" => 100,
-            //"location" => [(int) floor($mapWidth / 2), (int) floor($mapHeight / 2)],
             "location" => [15, 15],
             "screen" => 0
         ];
@@ -114,12 +111,12 @@ class PageController extends AbstractController
         $stateJSON = $state->jsonSerialize();
 
         pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state, map) VALUES ($1, $2, $3);");
-        pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON) /*, json_encode($gameMaps["screensArray"])*/])
+        pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON), json_encode($gameMaps["screensArray"])])
             or die('Query failed: ' . pg_last_error());
         pg_close($con);
         unset($con);
         unset($con_login);
-        return $this->render('game.html.twig', ["state" => $stateJSON, "map" => $gameMaps["screensArray"]]);
+        return $this->redirectToRoute('game', ["name" => $name]);
     }
 
     /**
@@ -140,7 +137,6 @@ class PageController extends AbstractController
 
 
         if ($playerExists) {
-            print_r("welcome back");
             $postgresStateArray = json_decode(pg_fetch_all($results)[0]["state"], true);
             $postgresMapArray = json_decode(pg_fetch_all($results)[0]["map"], true);
             $gameState = [
@@ -170,27 +166,6 @@ class PageController extends AbstractController
             return $this->redirectToRoute('createNewGame', ["name" => $name]);
         }
     }
-
-    /*
-    #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
-    public function getNewScreen(string $name, Request $request): Response
-    {
-    $incoming_location = json_decode($request->getContent())->{'location'};
-    $leftFrom = json_decode($request->getContent())->{'direction'};
-    $con_login = $this->init_env();
-    $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
-    or die("Could not connect to server\n");
-    $query = "SELECT * FROM games WHERE name = '{$name}';";
-    $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
-    $postgresResults = pg_fetch_all($results)[0];
-    //$decodedPostgresState = json_decode($postgresResults["state"]);
-    $decodedPostgresMap = json_decode($postgresResults["map"]);
-    pg_close($con);
-    unset($con);
-    unset($con_login);
-    return new Response(json_encode($leftFrom));
-    }
-    */
 
     #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
     public function getFirstScreen(string $name, Request $request): Response
