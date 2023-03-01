@@ -6,23 +6,16 @@ use App\Entity\DatabaseConnectionCredentials;
 use App\Entity\State;
 use App\NoiseGenerator\NoiseGenerator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
+use Psr\Log\LoggerInterface;
+
 /**
  * @todo saving mechanic where the state is sent to postgres.
- * 
- * OF GREAT IMPORTANCE —
- * Because the map is large, let's leverage the fact that we're already cutting it
- * up into squares. instead of querying the entire fucking map everytime the player walks
- * across a river, let's create a postgres table with 100 columns, each one labelled 
- * 
- * Currently, all the things used in the front are working here. The function which 
- * attempts to put 100 rows of screens into the "$name" table seems to not work 
- * AT ALL. figure this out. The map as a whole is just too large and we need to split
- * it up into smaller pieces because a 14-20 second loading time is horrific.
  */
 class PageController extends AbstractController
 {
@@ -81,7 +74,7 @@ class PageController extends AbstractController
         $gameState = [
             "name" => $name,
             "health" => 100,
-            "location" => [15, 15],
+            "location" => [150, 150],
             "screen" => 0
         ];
 
@@ -107,23 +100,23 @@ class PageController extends AbstractController
             }
         }
 
-        $gameMaps = [
-            "screensArray" => $screensArray
-        ];
-
         $state = new State($gameState);
 
         $stateJSON = $state->jsonSerialize();
 
-        pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state, map) VALUES ($1, $2, $3);");
-        pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON), json_encode($gameMaps["screensArray"])])
+        pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state) VALUES ($1, $2);");
+        pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON)])
             or die('Query failed: ' . pg_last_error());
         pg_get_result($con);
 
-        pg_prepare($con, "fillTable", "INSERT INTO $name (id, screen) VALUES $1, $2;");
-        for ($i = 0; $i < count($screensArray) - 1; $i++) {
-            pg_send_execute($con, "fillTable", [$i, json_encode($screensArray[$i])]) or die('Query failed: ' . pg_last_error());
+        if (pg_query($con, "CREATE TABLE IF NOT EXISTS $name (id int NOT NULL UNIQUE, screen json NOT NULL);") != false) {
+            pg_prepare($con, "fillTable", "INSERT INTO $name(id, screen) VALUES ($1, $2);");
+            for ($i = 0; $i < count($screensArray) - 1; $i++) {
+                pg_send_execute($con, "fillTable", [$i, json_encode($screensArray[$i])]) or die('Query failed: ' . pg_last_error());
+                pg_get_result($con);
+            }
         }
+
 
         pg_close($con);
         unset($con);
@@ -150,16 +143,11 @@ class PageController extends AbstractController
 
         if ($playerExists) {
             $postgresStateArray = json_decode(pg_fetch_all($results)[0]["state"], true);
-            $postgresMapArray = json_decode(pg_fetch_all($results)[0]["map"], true);
             $gameState = [
                 "name" => $postgresStateArray["name"],
                 "health" => $postgresStateArray["health"],
                 "location" => $postgresStateArray["location"],
                 "screen" => $postgresStateArray["screen"],
-            ];
-
-            $gameMaps = [
-                "screensArray" => $postgresMapArray,
             ];
 
             $state = new State($gameState);
@@ -169,7 +157,7 @@ class PageController extends AbstractController
             pg_close($con);
             unset($con);
             unset($con_login);
-            return $this->render('game.html.twig', ["state" => $stateJSON, "map" => $gameMaps["screensArray"]]);
+            return $this->render('game.html.twig', ["state" => $stateJSON]);
 
         } else {
             pg_close($con);
@@ -189,15 +177,15 @@ class PageController extends AbstractController
         $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
             or die("Could not connect to server\n");
 
-        $query = "SELECT * FROM games WHERE name = '{$name}';";
-        $results = pg_query($con, $query) or die('Query failed: ' . pg_last_error());
+        pg_prepare($con, "getScreen", "SELECT screen FROM $name WHERE id = $1;");
+        pg_send_execute($con, "getScreen", [$incoming_screen]);
+        $results = pg_get_result($con);
 
-        $postgresResults = pg_fetch_all($results)[0];
-        $decodedPostgresMap = json_decode($postgresResults["map"])[$incoming_screen];
+        $postgresResults = pg_fetch_all($results);
         pg_close($con);
         unset($con);
         unset($con_login);
 
-        return new Response(json_encode($decodedPostgresMap));
+        return new JsonResponse($postgresResults[0]["screen"]);
     }
 }
