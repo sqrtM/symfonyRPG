@@ -12,8 +12,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-use Psr\Log\LoggerInterface;
-
 /**
  * @todo saving mechanic where the state is sent to postgres.
  */
@@ -187,5 +185,26 @@ class PageController extends AbstractController
         unset($con_login);
 
         return new JsonResponse($postgresResults[0]["screen"]);
+    }
+
+    #[Route('/game/save/{name}', name: 'saveGame', methods: ['POST'])]
+    public function saveGame(string $name, Request $request): Response
+    {
+        $incoming_state = json_decode($request->getContent())->{'state'};
+
+        $con_login = $this->init_env();
+
+        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
+            or die("Could not connect to server\n");
+
+        pg_prepare($con, "saveGame", "UPDATE games SET state = $1 WHERE name = '$name';");
+        pg_send_execute($con, "getScreen", [json_encode($incoming_state)]);
+        $results = pg_get_result($con);
+
+        pg_close($con);
+        unset($con);
+        unset($con_login);
+
+        return new JsonResponse($results === false ? false : true);
     }
 }

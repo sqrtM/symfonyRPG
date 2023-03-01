@@ -13,7 +13,7 @@ export type MapState = {
 export default function (props: MapState): JSX.Element {
   /**
    * perhaps this shouldn't be a "state" thing until we switch scenes.
-   * it's causing re-renders.
+   * it's causing re-renders...
    */
   const [location, setLocation] = useState<LocationTuple>(props.location);
   const [loading, setLoading] = useState<Boolean>(true);

@@ -26,5 +26,6 @@ body {
 }
 
 #game-container {
-  display: flex
+  display: flex;
+  align-items: flex-start
 }

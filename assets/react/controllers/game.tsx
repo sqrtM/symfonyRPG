@@ -13,15 +13,13 @@ import {
 import axios from "axios";
 import SideBar from "../components/SideBar";
 
-/**
- * @todo — IF THIS DOESN'T WORK, SIGN IN WITH USER "bbb".
- */
 export default function (props: GameState): JSX.Element {
   const [currentMap, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
   const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
     props.state.location
   );
   const [tileSelect, setTileSelect] = useState<Tile<TileName> | null>(null);
+  const [screenIndexState, setScreenIndex] = useState<number>(0);
 
   function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
     console.log(noiseArray);
@@ -81,6 +79,7 @@ export default function (props: GameState): JSX.Element {
 
   useEffect(() => {
     grabNewScreen(currentLocation);
+    console.log(JSON.stringify(props.state))
   }, []);
 
   function grabNewScreen(location: LocationTuple) {
@@ -94,14 +93,36 @@ export default function (props: GameState): JSX.Element {
         screen: screenIndex,
       })
       .then((res) => {
-        let jsonData = JSON.parse(res.data)
+        let jsonData = JSON.parse(res.data);
         let tileMap = noiseToTile(jsonData);
         setCurrentScreen(tileMap);
+        setScreenIndex(screenIndex);
       });
   }
 
   function mapHover(tile: Tile<TileName>) {
     setTileSelect(tile);
+  }
+
+  function saveGame() {
+    console.log(
+      props.state.name,
+      100,
+      currentLocation,
+      screenIndexState,
+    )
+    axios
+      .post("http://127.0.0.1:8000/game/save/" + props.state.name, {
+        state: {
+          name: props.state.name,
+          health: 100,
+          location: currentLocation,
+          screen: screenIndexState,
+        },
+      })
+      .then((res) => {
+        console.log(res.data);
+      });
   }
 
   return (
@@ -113,6 +134,12 @@ export default function (props: GameState): JSX.Element {
         mapHover={mapHover}
       />
       <SideBar state={props.state} selectedTile={tileSelect} />
+      <input
+        type="button"
+        value="save game"
+        onClick={saveGame}
+        style={{ alignSelf: "flex-start" }}
+      />
     </div>
   );
 }
