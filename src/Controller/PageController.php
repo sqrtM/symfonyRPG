@@ -12,12 +12,17 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
+ * @todo saving mechanic where the state is sent to postgres.
  * 
+ * OF GREAT IMPORTANCE —
+ * Because the map is large, let's leverage the fact that we're already cutting it
+ * up into squares. instead of querying the entire fucking map everytime the player walks
+ * across a river, let's create a postgres table with 100 columns, each one labelled 
  * 
- * Idea is that you send the state to the player when they load the game
- * So you search the DB for the username, if it doesn't come up just init a 
- * blank JSON template. If it DOES come up, just send the state to the player.
- * Then, the game will periodically save itself and or the player will manually save.
+ * Currently, all the things used in the front are working here. The function which 
+ * attempts to put 100 rows of screens into the "$name" table seems to not work 
+ * AT ALL. figure this out. The map as a whole is just too large and we need to split
+ * it up into smaller pieces because a 14-20 second loading time is horrific.
  */
 class PageController extends AbstractController
 {
@@ -113,6 +118,13 @@ class PageController extends AbstractController
         pg_prepare($con, "createNewGameInstance", "INSERT INTO games (name, state, map) VALUES ($1, $2, $3);");
         pg_send_execute($con, "createNewGameInstance", [$name, json_encode($stateJSON), json_encode($gameMaps["screensArray"])])
             or die('Query failed: ' . pg_last_error());
+        pg_get_result($con);
+
+        pg_prepare($con, "fillTable", "INSERT INTO $name (id, screen) VALUES $1, $2;");
+        for ($i = 0; $i < count($screensArray) - 1; $i++) {
+            pg_send_execute($con, "fillTable", [$i, json_encode($screensArray[$i])]) or die('Query failed: ' . pg_last_error());
+        }
+
         pg_close($con);
         unset($con);
         unset($con_login);
@@ -168,7 +180,7 @@ class PageController extends AbstractController
     }
 
     #[Route('/game/api/{name}', name: 'getNewScreen', methods: ['POST'])]
-    public function getFirstScreen(string $name, Request $request): Response
+    public function getNewScreen(string $name, Request $request): Response
     {
         $incoming_screen = json_decode($request->getContent())->{'screen'};
 
