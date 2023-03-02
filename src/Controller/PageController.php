@@ -29,6 +29,8 @@ class PageController extends AbstractController
         );
     }
 
+    private int $mapWidth = 300;
+    private int $mapHeight = 300;
 
     #[Route('/', name: 'home', methods: ['GET'])]
     public function hello(): Response
@@ -54,21 +56,18 @@ class PageController extends AbstractController
         $seed = intval(implode($seedArray), 10);
         $noiseGenerator = new NoiseGenerator($seed);
 
-        $mapWidth = 300;
-        $mapHeight = 300;
-
         //fill the noise array with perlin noise.
-        $noiseArray = array_fill(0, $mapHeight, array_fill(0, $mapWidth, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0]));
-        for ($i = 0; $i < $mapHeight; $i++) {
-            for ($j = 0; $j < $mapWidth; $j++) {
-                $noiseArray[$i][$j]["noiseValue"] += $noiseGenerator->random2D($i / $mapWidth * ($mapWidth >> 4), $j / $mapHeight * ($mapHeight >> 4));
+        $noiseArray = array_fill(0, $this->mapHeight, array_fill(0, $this->mapWidth, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0]));
+        for ($i = 0; $i < $this->mapHeight; $i++) {
+            for ($j = 0; $j < $this->mapWidth; $j++) {
+                $noiseArray[$i][$j]["noiseValue"] += $noiseGenerator->random2D($i / $this->mapWidth * ($this->mapWidth >> 4), $j / $this->mapHeight * ($this->mapHeight >> 4));
                 $noiseArray[$i][$j]["location"]["y"] = $i;
                 $noiseArray[$i][$j]["location"]["x"] = $j;
             }
         }
 
-        $yCoord = random_int(1, $mapHeight - 1);
-        $xCoord = random_int(1, $mapHeight - 1);
+        $yCoord = random_int(1, $this->mapHeight - 1);
+        $xCoord = random_int(1, $this->mapHeight - 1);
         // psycho lambda to get the inital screen by taking the two digits and concatinating them.
         // a useful (and purposeful) side effect of keeping everything divisible by 10.
         $startingScreen = intval(strval(floor($yCoord / 30)) . strval(floor($xCoord / 30)));
@@ -88,12 +87,12 @@ class PageController extends AbstractController
         */
         $screensArray = [];
         $numberOfScreens = 10; // really, number of ROWS of screens...
-        for ($yCoordMiddle = ($mapHeight / $numberOfScreens) / 2; $yCoordMiddle <= $mapHeight * 0.99; $yCoordMiddle += $mapHeight / $numberOfScreens) {
-            for ($xCoordMiddle = ($mapWidth / $numberOfScreens) / 2; $xCoordMiddle <= $mapWidth * 0.99; $xCoordMiddle += $mapWidth / $numberOfScreens) {
+        for ($yCoordMiddle = ($this->mapHeight / $numberOfScreens) / 2; $yCoordMiddle <= $this->mapHeight * 0.99; $yCoordMiddle += $this->mapHeight / $numberOfScreens) {
+            for ($xCoordMiddle = ($this->mapWidth / $numberOfScreens) / 2; $xCoordMiddle <= $this->mapWidth * 0.99; $xCoordMiddle += $this->mapWidth / $numberOfScreens) {
                 $screen = [];
-                for ($i = $yCoordMiddle - (($mapHeight / $numberOfScreens) / 2); $i < ($yCoordMiddle + ($mapHeight / $numberOfScreens) / 2); $i++) {
+                for ($i = $yCoordMiddle - (($this->mapHeight / $numberOfScreens) / 2); $i < ($yCoordMiddle + ($this->mapHeight / $numberOfScreens) / 2); $i++) {
                     $screenRow = [];
-                    for ($j = $xCoordMiddle - (($mapWidth / $numberOfScreens) / 2); $j < ($xCoordMiddle + ($mapWidth / $numberOfScreens) / 2); $j++) {
+                    for ($j = $xCoordMiddle - (($this->mapWidth / $numberOfScreens) / 2); $j < ($xCoordMiddle + ($this->mapWidth / $numberOfScreens) / 2); $j++) {
                         array_push($screenRow, $noiseArray[(int) $i][(int) $j]);
                     }
                     array_push($screen, $screenRow);
@@ -117,12 +116,11 @@ class PageController extends AbstractController
         */
         if (pg_query($con, "CREATE TABLE IF NOT EXISTS $name (id int NOT NULL UNIQUE, screen json NOT NULL);") != false) {
             pg_prepare($con, "fillTable", "INSERT INTO $name(id, screen) VALUES ($1, $2);");
-            for ($i = 0; $i < count($screensArray) - 1; $i++) {
+            for ($i = 0; $i < count($screensArray); $i++) {
                 pg_send_execute($con, "fillTable", [$i, json_encode($screensArray[$i])]) or die('Query failed: ' . pg_last_error());
                 pg_get_result($con);
             }
         }
-
 
         pg_close($con);
         unset($con);
@@ -180,7 +178,26 @@ class PageController extends AbstractController
         $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
             or die("Could not connect to server\n");
 
-        $incoming_screen = json_decode($request->getContent())->{'screen'};
+        $incoming_screen = intval(json_decode($request->getContent())->{'screen'});
+        /*
+        array of screens we will cache in the front end to reduce loading times (hopefully...)
+        */
+        $desiredScreens = [
+            $incoming_screen - 11 >= 0 ? $incoming_screen - 11 : null,
+            $incoming_screen - 10 >= 0 ? $incoming_screen - 10 : null,
+            $incoming_screen - 9 >= 0 ? $incoming_screen - 9   : null,
+
+
+            $incoming_screen - 1 >= 0 ? $incoming_screen - 1 : null,
+            $incoming_screen,
+            $incoming_screen + 1 < $this->mapWidth ? $incoming_screen + 1   : null,
+
+            $incoming_screen + 9 < $this->mapWidth ? $incoming_screen + 9   : null,
+            $incoming_screen + 10 < $this->mapWidth ? $incoming_screen + 10 : null,
+            $incoming_screen + 11 < $this->mapWidth ? $incoming_screen + 11 : null,
+        ];
+
+        /*
         pg_prepare($con, "getScreen", "SELECT screen FROM $name WHERE id = $1;");
         pg_send_execute($con, "getScreen", [$incoming_screen]);
         $results = pg_get_result($con);
@@ -190,6 +207,23 @@ class PageController extends AbstractController
         unset($con);
         unset($con_login);
         return new JsonResponse($postgresResults[0]["screen"]);
+        */
+
+        $resultsArray = [];
+        pg_prepare($con, "fetchScreens", "SELECT screen FROM $name WHERE id = $1;");
+        for ($i = 0; $i < count($desiredScreens); $i++) {
+            pg_send_execute($con, "fetchScreens", [$desiredScreens[$i]]) or die('Query failed: ' . pg_last_error());
+            array_push($resultsArray, ["id" => $desiredScreens[$i], "screen" => pg_get_result($con)]);
+        }
+        $returnArray = [];
+        for ($i = 0; $i < count($resultsArray); $i++) {
+            array_push($returnArray, ["id" => $resultsArray[$i]["id"], "screen" => pg_fetch_all($resultsArray[$i]["screen"])]);
+        }  
+
+        pg_close($con);
+        unset($con);
+        unset($con_login);
+        return new JsonResponse($returnArray);
     }
 
 

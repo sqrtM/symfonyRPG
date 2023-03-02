@@ -14,15 +14,15 @@ import axios from "axios";
 import SideBar from "../components/SideBar";
 
 export default function (props: GameState): JSX.Element {
-  const [currentMap, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
+  const [currentScreen, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
+  const [cachedScreens, setCachedScreens] = useState<{ id: number; screen: MapInfo[][]; }[]>([]);
   const [currentLocation, setCurrentLocation] = useState<LocationTuple>(
     props.state.location
   );
-  const [tileSelect, setTileSelect] = useState<Tile<TileName> | null>(null);
-  const [screenIndexState, setScreenIndex] = useState<number>(0);
+  const [selectedTile, setSelectedTile] = useState<Tile<TileName> | null>(null);
+  const [screenIndexState, setScreenIndexState] = useState<number>(0);
 
   function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
-    console.log(noiseArray);
     let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
       Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
     );
@@ -78,10 +78,19 @@ export default function (props: GameState): JSX.Element {
   }
 
   useEffect(() => {
+    let matchingScreen = cachedScreens.find((i: {id: number, screen: MapInfo[][]}) => i.id === screenIndexState);
+    if (matchingScreen != undefined) {
+      console.log("this should now redraw")
+      setCurrentScreen(noiseToTile(matchingScreen.screen))
+    }
+  }, [screenIndexState]);
+
+  useEffect(() => {
+    console.log("this one")
     grabNewScreen(currentLocation);
-    console.log(JSON.stringify(props.state))
   }, []);
 
+/*
   function grabNewScreen(location: LocationTuple) {
     const screenIndex = +(
       Math.floor(location[0] / 30).toString() +
@@ -96,12 +105,38 @@ export default function (props: GameState): JSX.Element {
         let jsonData = JSON.parse(res.data);
         let tileMap = noiseToTile(jsonData);
         setCurrentScreen(tileMap);
-        setScreenIndex(screenIndex);
+        setScreenIndexState(screenIndex);
       });
   }
+*/
+
+function grabNewScreen(location: LocationTuple) {
+  console.log(cachedScreens)
+  const screenIndex = +(
+    Math.floor(location[0] / 30).toString() +
+    Math.floor(location[1] / 30).toString()
+  );
+  setScreenIndexState(screenIndex)
+  setCurrentLocation(location)
+  axios
+    .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
+      screen: screenIndex,
+    })
+    .then((res) => {
+      let parsedData: {id: number, screen: MapInfo[][]}[] = res.data.map((i: {id: number, screen: {screen: string}[]}) => {
+        return { id: i.id, screen: JSON.parse(i.screen[0].screen) };
+      })
+      let matchingScreen = parsedData.find((i: {id: number, screen: MapInfo[][]}) => i.id === props.state.screen)
+      if (matchingScreen === undefined) { //if we STILL cant find it...
+        throw("error")
+      }
+      setCurrentScreen(noiseToTile(matchingScreen.screen))
+      setCachedScreens(parsedData);
+    });
+}
 
   function mapHover(tile: Tile<TileName>) {
-    setTileSelect(tile);
+    setSelectedTile(tile);
   }
 
   function saveGame() {
@@ -128,12 +163,12 @@ export default function (props: GameState): JSX.Element {
   return (
     <div id="game-container">
       <GameMap
-        map={currentMap}
+        map={currentScreen}
         location={currentLocation}
         grabNewScreen={grabNewScreen}
         mapHover={mapHover}
       />
-      <SideBar state={props.state} selectedTile={tileSelect} />
+      <SideBar state={props.state} selectedTile={selectedTile} />
       <input
         type="button"
         value="save game"
