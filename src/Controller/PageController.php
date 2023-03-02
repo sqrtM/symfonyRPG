@@ -13,14 +13,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
- * @todo saving mechanic where the state is sent to postgres.
+ * @todo DONE !!!! mechanic where the state is sent to postgres.
  */
 class PageController extends AbstractController
 {
 
+    /**
+    * @psalm-suppress InvalidArgument
+    */
     private function init_env(): DatabaseConnectionCredentials
     {
         return new DatabaseConnectionCredentials(
+               
             $this->getParameter('app.dbhost'),
             $this->getParameter('app.dbuser'),
             $this->getParameter('app.dbpass'),
@@ -72,7 +76,7 @@ class PageController extends AbstractController
         $gameState = [
             "name" => $name,
             "health" => 100,
-            "location" => [150, 150],
+            "location" => [15, 15],
             "screen" => 0
         ];
 
@@ -90,7 +94,7 @@ class PageController extends AbstractController
                 for ($i = $yCoordMiddle - (($mapHeight / $numberOfScreens) / 2); $i < ($yCoordMiddle + ($mapHeight / $numberOfScreens) / 2); $i++) {
                     $screenRow = [];
                     for ($j = $xCoordMiddle - (($mapWidth / $numberOfScreens) / 2); $j < ($xCoordMiddle + ($mapWidth / $numberOfScreens) / 2); $j++) {
-                        array_push($screenRow, $noiseArray[$i][$j]);
+                        array_push($screenRow, $noiseArray[(int)$i][(int)$j]);
                     }
                     array_push($screen, $screenRow);
                 }
@@ -127,7 +131,7 @@ class PageController extends AbstractController
      * Split this up into smaller functions and classes.
      */
     #[Route('/game/{name}', name: 'game', methods: ['GET'])]
-    public function game(string $name): Response|RedirectResponse
+    public function game(string $name): Response | RedirectResponse
     {
         $con_login = $this->init_env();
 
@@ -197,14 +201,17 @@ class PageController extends AbstractController
         $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
             or die("Could not connect to server\n");
 
-        pg_prepare($con, "saveGame", "UPDATE games SET state = $1 WHERE name = '$name';");
-        pg_send_execute($con, "getScreen", [json_encode($incoming_state)]);
+        // there's likely a nicer way to do this without so many concats, 
+        // but this is the only syntax I could make work properly... 
+        $query = "UPDATE games SET state = " . "'". json_encode($incoming_state) . "'" . "WHERE name = '$name' RETURNING *;";
+        pg_prepare($con, "getScreen", $query);
+        pg_send_execute($con, "getScreen", []);
         $results = pg_get_result($con);
 
         pg_close($con);
         unset($con);
         unset($con_login);
 
-        return new JsonResponse($results === false ? false : true);
+        return new Response(!$results === false);
     }
 }
