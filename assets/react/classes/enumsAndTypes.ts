@@ -4,6 +4,10 @@
  */
 export type LocationTuple = [y: number, x: number];
 
+export type ParsedScreen = { id: number; screen: MapInfo[][] }
+export type IncomingScreen = { id: number; screen: { screen?: string }[] }
+
+
 export type MapInfo = {
   location: { y: number; x: number };
   noiseValue: number;

@@ -1,4 +1,4 @@
-import { TileName, TileChar, TileType, Tile, LocationTuple } from './enumsAndTypes'
+import { TileName, TileChar, TileType, Tile, LocationTuple, MapInfo } from './enumsAndTypes'
 
 /**
  * Do not forget : the original problem we had with this function is that 
@@ -11,6 +11,61 @@ export const tileGetter = {
     let copyTile = structuredClone(tileDefinitions[name]);
     return new Tile(copyTile, location)
   },
+}
+
+export function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
+  let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
+    Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
+  );
+  noiseArray.forEach((i: MapInfo[], index: number) => {
+    i.map((j: MapInfo, jndex: number) => {
+      switch (true) {
+        case j.noiseValue >= 0.75:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Wall, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        case j.noiseValue >= 0.4:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Mountain, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        case j.noiseValue >= 0.3:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Slope, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        case j.noiseValue >= 0:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Grass, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        case j.noiseValue >= -0.25:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Shore, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        case j.noiseValue >= -0.6:
+          newTileMap[index][jndex] = tileGetter.get(TileName.Water, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+        default:
+          newTileMap[index][jndex] = tileGetter.get(TileName.DeepWater, [
+            j.location.y,
+            j.location.x,
+          ]);
+          break;
+      }
+    });
+  });
+  return newTileMap;
 }
 
 const tileDefinitions: { [key in TileName]: TileType<TileName> } = {

@@ -19,7 +19,7 @@ export default function (props: MapState): JSX.Element {
   const [loading, setLoading] = useState<Boolean>(true);
 
   /**
-   * left and up lambdas is broken. they dont move the screen properly.
+   * left lambda is broken. they dont move the screen properly.
    * 
    * original : 
    * location[0] > (Math.floor(location[0] / 30) * 30) - 1 // topleft
@@ -60,11 +60,11 @@ export default function (props: MapState): JSX.Element {
         break;
       case "ArrowLeft":
         setLocation([location[0], (location[1] -= 1)]);
-        location[1] >= (Math.floor(location[1] / 30) * 30) // top left
+        location[1] === Math.floor(location[1] / 30) * 30 - 29// top left
           ? console.log(
               "left ",
               location[1],
-              (Math.floor(location[1] / 30) * 30),
+              Math.floor(location[1] / 30) * 30 - 29,
             )
           : props.grabNewScreen(location);
         break;
