@@ -57,10 +57,12 @@ class PageController extends AbstractController
         $noiseGenerator = new NoiseGenerator($seed);
 
         //fill the noise array with perlin noise.
-        $noiseArray = array_fill(0, $this->mapHeight, array_fill(0, $this->mapWidth, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0]));
+        $noiseArray = array_fill(0, $this->mapHeight, array_fill(0, $this->mapWidth, ["location" => ["y" => 0, "x" => 0], "noiseValue" => 0, "seen" => false]));
         for ($i = 0; $i < $this->mapHeight; $i++) {
             for ($j = 0; $j < $this->mapWidth; $j++) {
-                $noiseArray[$i][$j]["noiseValue"] += $noiseGenerator->random2D($i / $this->mapWidth * ($this->mapWidth >> 4), $j / $this->mapHeight * ($this->mapHeight >> 4));
+                //$distanceFromMiddle = abs(($i / $this->mapHeight) - 0.5) + abs(($j / $this->mapWidth) - 0.5); // this may also need a small phi value to offset the error.
+                $noiseValue = $noiseGenerator->random2D($i / $this->mapWidth * ($this->mapWidth >> 4), $j / $this->mapHeight * ($this->mapHeight >> 4));
+                $noiseArray[$i][$j]["noiseValue"] += $noiseValue; //- ($noiseValue * $distanceFromMiddle);
                 $noiseArray[$i][$j]["location"]["y"] = $i;
                 $noiseArray[$i][$j]["location"]["x"] = $j;
             }
@@ -180,34 +182,31 @@ class PageController extends AbstractController
 
         $incoming_screen = intval(json_decode($request->getContent())->{'screen'});
         /*
-        array of screens we will cache in the front end to reduce loading times (hopefully...)
+        array of screens we will cache in the front end to reduce loading times
+        TODO: Instead of sending all nine screens, we should only send the
+        THREE unique screens which are new.
+
+        i.e., the request should also be outfitted with a DIRECTION in order
+        to ascetain which of the tiles will actually be NEW tiles. If the player
+        goes to the right, they will only need the NE, E, and SE tiles, because they 
+        will already have the center tile, the N tile and the S tile, as well as all tiles
+        to the west. 
+        If done correctly, this would cut down the amount of data being sent by 2/3.
         */
         $desiredScreens = [
-            $incoming_screen - 11 >= 0 ? $incoming_screen - 11 : null,
-            $incoming_screen - 10 >= 0 ? $incoming_screen - 10 : null,
-            $incoming_screen - 9 >= 0 ? $incoming_screen - 9   : null,
+            $incoming_screen - 11 >= 0 ? $incoming_screen - 11 : null,  // nw
+            $incoming_screen - 10 >= 0 ? $incoming_screen - 10 : null,  // n
+            $incoming_screen - 9 >= 0 ? $incoming_screen - 9   : null,  // ne
 
 
-            $incoming_screen - 1 >= 0 ? $incoming_screen - 1 : null,
-            $incoming_screen,
-            $incoming_screen + 1 < $this->mapWidth ? $incoming_screen + 1   : null,
+            $incoming_screen - 1 >= 0 ? $incoming_screen - 1 : null, // w
+            $incoming_screen, // center
+            $incoming_screen + 1 < $this->mapWidth ? $incoming_screen + 1   : null, // e
 
-            $incoming_screen + 9 < $this->mapWidth ? $incoming_screen + 9   : null,
-            $incoming_screen + 10 < $this->mapWidth ? $incoming_screen + 10 : null,
-            $incoming_screen + 11 < $this->mapWidth ? $incoming_screen + 11 : null,
+            $incoming_screen + 9 < $this->mapWidth ? $incoming_screen + 9   : null, // sw
+            $incoming_screen + 10 < $this->mapWidth ? $incoming_screen + 10 : null, // s
+            $incoming_screen + 11 < $this->mapWidth ? $incoming_screen + 11 : null, // se
         ];
-
-        /*
-        pg_prepare($con, "getScreen", "SELECT screen FROM $name WHERE id = $1;");
-        pg_send_execute($con, "getScreen", [$incoming_screen]);
-        $results = pg_get_result($con);
-        $postgresResults = pg_fetch_all($results);
-
-        pg_close($con);
-        unset($con);
-        unset($con_login);
-        return new JsonResponse($postgresResults[0]["screen"]);
-        */
 
         $resultsArray = [];
         pg_prepare($con, "fetchScreens", "SELECT screen FROM $name WHERE id = $1;");

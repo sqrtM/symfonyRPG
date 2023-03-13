@@ -11,6 +11,7 @@ export type IncomingScreen = { id: number; screen: { screen?: string }[] }
 export type MapInfo = {
   location: { y: number; x: number };
   noiseValue: number;
+  seen: boolean;
 };
 
 export type GameState = {
