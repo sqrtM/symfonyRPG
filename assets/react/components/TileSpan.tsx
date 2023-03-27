@@ -13,6 +13,8 @@ export default function (props: TileProps): JSX.Element {
     props.mapHover(tile)
   } 
 
+  if (props.isPlayerHere) console.log(props)
+
   return (
     <span
       className={

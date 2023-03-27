@@ -23,24 +23,28 @@ export default function (props: MapState): JSX.Element {
     // interaction than "-= 1". Weird.
     switch (e.key) {
       case "ArrowUp":
+        console.log(location);
         setLocation([(location[0] -= 1), location[1]]);
         if (location[0] != Math.floor(location[0] / 30) * 30) {
           props.grabNewScreen(location);
         }
         break;
       case "ArrowDown":
+        console.log(location);
         setLocation([(location[0] += 1), location[1]]);
         if (location[0] != Math.ceil(location[0] / 30) * 30 - 29) {
           props.grabNewScreen(location);
         }
         break;
       case "ArrowRight":
+        console.log(location);
         setLocation([location[0], (location[1] += 1)]);
         if (location[1] != Math.ceil(location[1] / 30) * 30 - 29) {
           props.grabNewScreen(location);
         }
         break;
       case "ArrowLeft":
+        console.log(location);
         setLocation([location[0], (location[1] -= 1)]);
         if (location[1] != Math.floor(location[1] / 30) * 30 - 29) {
           props.grabNewScreen(location);

@@ -1,33 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\DatabaseConnectionCredentials;
+use App\Controller\AbsCon;
 use App\Entity\Game;
-use App\Entity\Map;
 use App\Entity\State;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-class PageController extends AbstractController
+class PageController extends AbsCon
 {
-    /**
-     * @psalm-suppress InvalidArgument
-     */
-    private function initEnv(): DatabaseConnectionCredentials
-    {
-        return new DatabaseConnectionCredentials(
-            $this->getParameter('app.dbhost'),
-            $this->getParameter('app.dbuser'),
-            $this->getParameter('app.dbpass'),
-            $this->getParameter('app.dbname'),
-        );
-    }
-
     private int $mapWidth = 300;
     private int $mapHeight = 300;
 
@@ -40,63 +27,23 @@ class PageController extends AbstractController
     #[Route('/game/{name}/new', name: 'createNewGame', methods: array('GET'))]
     public function createNewGame(string $name): RedirectResponse
     {
-        $con_login = $this->initEnv();
-        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
-            or exit("Could not connect to server\n");
-
-        $newGame = new Game();
-        $newSeed = $newGame->createSeed($name);
-
-        $newMap = new Map($this->mapHeight, $this->mapWidth, $newSeed);
-        $newNoiseArray = $newMap->build();
-        $newScreensArray = $newMap->splitMapIntoScreens($newNoiseArray);
-
-        $yCoord = random_int(1, $this->mapHeight - 1);
-        $xCoord = random_int(1, $this->mapHeight - 1);
-        // psycho lambda to get the inital screen by taking the two digits and concatinating them.
-        // a useful (and purposeful) side effect of keeping everything divisible by 10.
-        $startingScreen = intval(strval(floor($yCoord / 30)) . strval(floor($xCoord / 30)));
-
-        $gameState = array(
-            'name' => $name,
-            'health' => 100,
-            'location' => array($yCoord, $xCoord),
-            'screen' => $startingScreen,
-        );
-
-        $state = new State($gameState);
-        $stateJSON = $state->jsonSerialize();
-
-        pg_prepare($con, 'createNewGameInstance', 'INSERT INTO games (name, state) VALUES ($1, $2);');
-        pg_send_execute($con, 'createNewGameInstance', array($name, json_encode($stateJSON)))
-            or exit('Query failed: ' . pg_last_error());
-        pg_get_result($con);
-
-        /*
-        fill the table with all the screens; this prevents us from having a single, enormous map, and we now, instead,
-        have several disconnected "screens". This makes more sense in terms of the game loop anyway. This also allows for
-        silly things in the future, like being able to query into pre-made dungeons or whatever.
-        */
-        if (false !== pg_query($con, "CREATE TABLE IF NOT EXISTS $name (id int NOT NULL UNIQUE, screen json NOT NULL);")) {
-            pg_prepare($con, 'fillTable', "INSERT INTO $name(id, screen) VALUES ($1, $2);");
-            for ($i = 0; $i < count($newScreensArray); ++$i) {
-                pg_send_execute($con, 'fillTable', array($i, json_encode($newScreensArray[$i]))) or exit('Query failed: ' . pg_last_error());
-                pg_get_result($con);
-            }
+        try {
+            $con = pg_connect($this->getConnectionString());
+            $game = new Game($name, $this->mapHeight, $this->mapWidth, $con);
+            $game->initState();
+            $game->initMap();
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+        } finally {
+            pg_close($con);
         }
-
-        pg_close($con);
-        unset($con, $con_login);
-
         return $this->redirectToRoute('game', array('name' => $name));
     }
 
     #[Route('/game/{name}', name: 'game', methods: array('GET'))]
     public function game(string $name): Response|RedirectResponse
     {
-        $con_login = $this->initEnv();
-        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
-            or exit("Could not connect to server\n");
+        $con = pg_connect($this->getConnectionString()) or exit("Could not connect to server\n");
 
         $query = "SELECT * FROM games WHERE name = '{$name}';";
         $results = pg_query($con, $query) or exit('Query failed: ' . pg_last_error());
@@ -120,7 +67,6 @@ class PageController extends AbstractController
         }
 
         pg_close($con);
-        unset($con, $con_login);
 
         return $returnValue;
     }
@@ -132,9 +78,7 @@ class PageController extends AbstractController
     #[Route('/game/api/{name}', name: 'getNewScreen', methods: array('POST'))]
     public function getNewScreen(string $name, Request $request): Response
     {
-        $con_login = $this->initEnv();
-        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
-            or exit("Could not connect to server\n");
+        $con = pg_connect($this->getConnectionString()) or exit("Could not connect to server\n");
 
         $incoming_screen = intval(json_decode($request->getContent())->{'screen'});
         /*
@@ -175,7 +119,6 @@ class PageController extends AbstractController
         }
 
         pg_close($con);
-        unset($con, $con_login);
 
         return new JsonResponse($returnArray);
     }
@@ -183,9 +126,7 @@ class PageController extends AbstractController
     #[Route('/game/save/{name}', name: 'saveGame', methods: array('POST'))]
     public function saveGame(string $name, Request $request): Response
     {
-        $con_login = $this->initEnv();
-        $con = pg_connect("host={$con_login->host()} dbname={$con_login->name()} user={$con_login->user()} password={$con_login->pass()}")
-        or exit("Could not connect to server\n");
+        $con = pg_connect($this->getConnectionString()) or exit("Could not connect to server\n");
 
         $incoming_state = json_decode($request->getContent())->{'state'};
         // there's likely a nicer way to do this without so many concats,
@@ -199,7 +140,6 @@ class PageController extends AbstractController
         $results = pg_get_result($con);
 
         pg_close($con);
-        unset($con, $con_login);
 
         return new Response(false === !$results);
     }

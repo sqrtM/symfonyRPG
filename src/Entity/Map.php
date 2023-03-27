@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Service\NoiseGenerator;
@@ -9,7 +11,6 @@ class Map
     private int $height;
     private int $width;
     private int $seed;
-    private array $tileArray;
     private array $screensArray;
 
     public function __construct(int $height, int $width, int $seed)
@@ -22,23 +23,24 @@ class Map
     public function build()
     {
         $noiseGenerator = new NoiseGenerator($this->seed);
-        $tile = new Tile();
-        $noiseArray = array_fill(0, $this->height, array_fill(0, $this->width, clone $tile));
+        $noiseArray = array_fill(0, $this->height, array_fill(0, $this->width, 0));
         for ($i = 0; $i < $this->height; ++$i) {
             for ($j = 0; $j < $this->width; ++$j) {
-                $noiseValue = $noiseGenerator->random2D($i / $this->width * ($this->width >> 4), $j / $this->height * ($this->height >> 4));
-                $noiseArray[$i][$j]->setNoiseValue($noiseValue);
-                $noiseArray[$i][$j]->setLocation(new Location($i, $j));
+                $noiseValue = $noiseGenerator->random2D(
+                    $i / $this->width * ($this->width >> 4),
+                    $j / $this->height * ($this->height >> 4)
+                );
+                $noiseArray[$i][$j] = new Tile(new Location($i, $j), $noiseValue);
             }
         }
         return $noiseArray;
     }
 
-        /*
-        this splits a large array into $numberOfScreens sections.
-        we can then hold this info in postgres and, instead of calculating these in real time,
-        */
-    public function splitMapIntoScreens(array $tileArray)
+    /*
+    this splits a large array into $numberOfScreens sections.
+    we can then hold this info in postgres and, instead of calculating these in real time,
+    */
+    public function splitIntoScreens(array $tileArray)
     {
         $screensArray = array();
         $numberOfScreens = 10; // really, number of ROWS of screens...

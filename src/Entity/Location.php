@@ -4,17 +4,17 @@ namespace App\Entity;
 
 class Location
 {
-    private readonly int $x;
     private readonly int $y;
+    private readonly int $x;
 
-    public function __construct(int $x, int $y)
+    public function __construct(int $y, int $x)
     {
-        $this->x = $x;
         $this->y = $y;
+        $this->x = $x;
     }
 
-    public function get()
+    public function get(): array
     {
-        return array($this->x, $this->y);
+        return array("y" => $this->y, "x" => $this->x);
     }
 }
