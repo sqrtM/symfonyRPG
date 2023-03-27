@@ -52,8 +52,11 @@ class Game
         $stateJSON = $state->jsonSerialize();
 
         pg_prepare($this->con, 'createNewGameInstance', 'INSERT INTO games (name, state) VALUES ($1, $2);');
-        pg_send_execute($this->con, 'createNewGameInstance', array($this->name, json_encode($stateJSON)))
-            or exit('Query failed: ' . pg_last_error());
+        try {
+            pg_send_execute($this->con, 'createNewGameInstance', array($this->name, json_encode($stateJSON)));
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+        }
         pg_get_result($this->con);
     }
 
@@ -67,10 +70,19 @@ class Game
         have several disconnected "screens". This makes more sense in terms of the game loop anyway. This also allows for
         silly things in the future, like being able to query into pre-made dungeons or whatever.
         */
-        if (false !== pg_query($this->con, "CREATE TABLE IF NOT EXISTS $this->name (id int NOT NULL UNIQUE, screen json NOT NULL);")) {
+        if (
+            false !== pg_query(
+                $this->con,
+                "CREATE TABLE IF NOT EXISTS $this->name (id int NOT NULL UNIQUE, screen json NOT NULL);"
+            )
+        ) {
             pg_prepare($this->con, 'fillTable', "INSERT INTO $this->name(id, screen) VALUES ($1, $2);");
             for ($i = 0; $i < count($screens); ++$i) {
-                pg_send_execute($this->con, 'fillTable', array($i, json_encode($screens[$i]))) or exit('Query failed: ' . pg_last_error());
+                pg_send_execute(
+                    $this->con,
+                    'fillTable',
+                    array($i, json_encode($screens[$i]))
+                ) or exit('Query failed: ' . pg_last_error());
                 pg_get_result($this->con);
             }
         }
