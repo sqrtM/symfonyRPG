@@ -72,6 +72,7 @@ export default function (props: GameState): JSX.Element {
           screen: screenIndex,
         })
         .then((res) => {
+          console.log(res.data)
           let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
             return i.screen[0].screen != undefined
               ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }

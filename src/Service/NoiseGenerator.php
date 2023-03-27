@@ -1,8 +1,9 @@
 <?php
-namespace App\NoiseGenerator;
+
+namespace App\Service;
 
 /**
- * https://github.com/martinlindhe/php-noisegenerator
+ * https://github.com/martinlindhe/php-noisegenerator.
  */
 class NoiseGenerator
 {
@@ -10,9 +11,9 @@ class NoiseGenerator
     private array $permutation;
     private int $seed;
 
-    function __construct(int $seed = null)
+    public function __construct(int $seed = null)
     {
-        //Initialize the permutation array
+        // Initialize the permutation array
         $this->p = array();
         $this->permutation = array(
             151,
@@ -270,132 +271,127 @@ class NoiseGenerator
             215,
             61,
             156,
-            180
+            180,
         );
 
-        //Populate it
-        for ($i = 0; $i < 256; $i++) {
+        // Populate it
+        for ($i = 0; $i < 256; ++$i) {
             $this->p[256 + $i] = $this->p[$i] = $this->permutation[$i];
         }
 
-        //And set the seed
-        $this->seed = ($seed === null) ? (int) microtime(true) * 10000 : $seed;
+        // And set the seed
+        $this->seed = (null === $seed) ? (int) microtime(true) * 10000 : $seed;
     }
 
-    function noise(float $x, float $y, float $z, array $octaves): float
+    public function noise(float $x, float $y, float $z, array $octaves): float
     {
-        //Set the initial value and initial size
+        // Set the initial value and initial size
         $value = 0.0;
         $initialSize = $octaves[0];
-
-        //Add finer and finer hues of smoothed noise together
+        // Add finer and finer hues of smoothed noise together
         foreach ($octaves as $octave) {
             $value += $this->smoothNoise($x / $octave, $y / $octave, $z / $octave) * $octave;
         }
 
-        //Return the result over the initial size
+        // Return the result over the initial size
         return $value / $initialSize;
     }
 
-    //This function determines what cube the point passed resides in
-    //and determines its value.
-    function smoothNoise(float $x, float $y, float $z): float
+    // This function determines what cube the point passed resides in
+    // and determines its value.
+    public function smoothNoise(float $x, float $y, float $z): float
     {
-        //Offset each coordinate by the seed value
+        // Offset each coordinate by the seed value
         $x += $this->seed;
         $y += $this->seed;
         $z += $this->seed;
-
         $origX = $x;
         $origY = $y;
         $origZ = $z;
-
-        $X1 = (int) floor($x) & 255; // FIND UNIT CUBE THAT
-        $Y1 = (int) floor($y) & 255; // CONTAINS POINT.
+        $X1 = (int) floor($x) & 255;
+        // FIND UNIT CUBE THAT
+        $Y1 = (int) floor($y) & 255;
+        // CONTAINS POINT.
         $Z1 = (int) floor($z) & 255;
-        $x -= floor($x); // FIND RELATIVE X,Y,Z
-        $y -= floor($y); // OF POINT IN CUBE.
+        $x -= floor($x);
+        // FIND RELATIVE X,Y,Z
+        $y -= floor($y);
+        // OF POINT IN CUBE.
         $z -= floor($z);
-        $u = $this->fade($x); // COMPUTE FADE CURVES
-        $v = $this->fade($y); // FOR EACH OF X,Y,Z.
+        $u = $this->fade($x);
+        // COMPUTE FADE CURVES
+        $v = $this->fade($y);
+        // FOR EACH OF X,Y,Z.
         $w = $this->fade($z);
-
         $A = $this->p[$X1] + $Y1;
         $AA = $this->p[$A] + $Z1;
-        $AB = $this->p[$A + 1] + $Z1; // HASH COORDINATES OF
+        $AB = $this->p[$A + 1] + $Z1;
+        // HASH COORDINATES OF
         $B = $this->p[$X1 + 1] + $Y1;
         $BA = $this->p[$B] + $Z1;
         $BB = $this->p[$B + 1] + $Z1; // THE 8 CUBE CORNERS,
 
-        //Interpolate between the 8 points determined
+        // Interpolate between the 8 points determined
         // AND ADD BLENDED RESULTS FROM 8 CORNERS OF CUBE
-        $result = $this->lerp(
-            $w,
-            $this->lerp(
-                $v,
-                $this->lerp(
-                    $u, $this->grad($this->p[$AA], $x, $y, $z),
-                    $this->grad($this->p[$BA], $x - 1, $y, $z)
-                ),
-                $this->lerp(
-                    $u, $this->grad($this->p[$AB], $x, $y - 1, $z),
-                    $this->grad($this->p[$BB], $x - 1, $y - 1, $z)
-                )
-            ),
-            $this->lerp(
-                $v,
-                $this->lerp(
-                    $u, $this->grad($this->p[$AA + 1], $x, $y, $z - 1),
-                    $this->grad($this->p[$BA + 1], $x - 1, $y, $z - 1)
-                ),
-                $this->lerp(
-                    $u, $this->grad($this->p[$AB + 1], $x, $y - 1, $z - 1),
-                    $this->grad($this->p[$BB + 1], $x - 1, $y - 1, $z - 1)
-                )
-            )
-        );
+        $result = $this->lerp($w, $this->lerp($v, $this->lerp(
+            $u,
+            $this->grad($this->p[$AA], $x, $y, $z),
+            $this->grad($this->p[$BA], $x - 1, $y, $z)
+        ), $this->lerp(
+            $u,
+            $this->grad($this->p[$AB], $x, $y - 1, $z),
+            $this->grad($this->p[$BB], $x - 1, $y - 1, $z)
+        )), $this->lerp($v, $this->lerp(
+            $u,
+            $this->grad($this->p[$AA + 1], $x, $y, $z - 1),
+            $this->grad($this->p[$BA + 1], $x - 1, $y, $z - 1)
+        ), $this->lerp(
+            $u,
+            $this->grad($this->p[$AB + 1], $x, $y - 1, $z - 1),
+            $this->grad($this->p[$BB + 1], $x - 1, $y - 1, $z - 1)
+        )));
 
         return $result;
     }
 
-    function fade(float $t): float
+    public function fade(float $t): float
     {
         return $t * $t * $t * (($t * (($t * 6) - 15)) + 10);
     }
 
-    function lerp(float $t, float $a, float $b): float
+    public function lerp(float $t, float $a, float $b): float
     {
-        //Make a weighted interpolation between points
+        // Make a weighted interpolation between points
         return $a + $t * ($b - $a);
     }
 
-    function grad(float $hash, float $x, float $y, float $z): float
+    public function grad(float $hash, float $x, float $y, float $z): float
     {
         // CONVERT LO 4 BITS OF HASH CODE INTO 12 GRADIENT DIRECTIONS
         $h = $hash & 15;
         $u = $h < 8 ? $x : $y;
-        $v = $h < 4 ? $y : ($h == 12 || $h == 14 ? $x : $z);
+        $v = $h < 4 ? $y : (12 == $h || 14 == $h ? $x : $z);
 
         return (($h & 1) == 0 ? $u : -$u) + (($h & 2) == 0 ? $v : -$v);
     }
 
-    function random2D(float $x, float $y): float
+    public function random2D(float $x, float $y): float
     {
         $x += $this->seed;
         $y += $this->seed;
-
         $value = 0.0;
         $initialSize = $size = 3;
-
         while ($size >= 1) {
             $value += $this->smoothNoise($x * 3 / $size, $y * 3 / $size, 100 / $size);
-            $size--;
+            --$size;
         }
 
-        if ($value < -1)
+        if ($value < -1) {
             $value = -1;
-        if ($value > 1)
+        }
+        if ($value > 1) {
             $value = 1;
+        }
 
         return $value;
     }
