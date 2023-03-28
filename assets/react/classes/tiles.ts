@@ -1,7 +1,14 @@
-import { TileName, TileChar, TileType, Tile, LocationTuple, MapInfo } from './enumsAndTypes'
+import {
+  TileName,
+  TileChar,
+  TileType,
+  Tile,
+  LocationTuple,
+  MapInfo,
+} from "./enumsAndTypes";
 
 /**
- * Do not forget : the original problem we had with this function is that 
+ * Do not forget : the original problem we had with this function is that
  * JS is always pass by reference. Originally, we were passing references
  * DIRECTLY TO the tile definitions, fucking the whole thing up. Ensure
  * you ALWAYS CLONE in these kinds of languages.
@@ -9,60 +16,20 @@ import { TileName, TileChar, TileType, Tile, LocationTuple, MapInfo } from './en
 export const tileGetter = {
   get: function (name: TileName, location: LocationTuple): Tile<TileName> {
     let copyTile = structuredClone(tileDefinitions[name]);
-    return new Tile(copyTile, location)
+    return new Tile(copyTile, location);
   },
-}
+};
 
-export function noiseToTile(noiseArray: MapInfo[][]): Tile<TileName>[][] {
+export function interpretIncomingTiles(incomingArray: MapInfo[][]): Tile<TileName>[][] {
   let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
     Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
   );
-  noiseArray.forEach((i: MapInfo[], index: number) => {
+  incomingArray.forEach((i: MapInfo[], index: number) => {
     i.map((j: MapInfo, jndex: number) => {
-      switch (true) {
-        case j.noiseValue >= 0.75:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Wall, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        case j.noiseValue >= 0.4:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Mountain, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        case j.noiseValue >= 0.3:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Slope, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        case j.noiseValue >= 0:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Grass, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        case j.noiseValue >= -0.25:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Shore, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        case j.noiseValue >= -0.6:
-          newTileMap[index][jndex] = tileGetter.get(TileName.Water, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-        default:
-          newTileMap[index][jndex] = tileGetter.get(TileName.DeepWater, [
-            j.location.y,
-            j.location.x,
-          ]);
-          break;
-      }
+      newTileMap[index][jndex] = tileGetter.get(
+        TileName[j.tileName as keyof typeof TileName],
+        [j.location.y, j.location.x]
+      );
     });
   });
   return newTileMap;
@@ -77,7 +44,7 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       speedMod: 3,
       walkable: false,
       flavorText:
-        'Some creator seems to have made certain that such an thing should appear nigh intraversable, lest one should get any bright ideas....',
+        "Some creator seems to have made certain that such an thing should appear nigh intraversable, lest one should get any bright ideas....",
       location: [-1, -1],
     },
     visuals: {
@@ -110,7 +77,7 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       defaultStyle: TileName.Slope,
       speedMod: 1.2,
       walkable: true,
-      flavorText: 'Such undulate terrain does not make for pleasant travels.',
+      flavorText: "Such undulate terrain does not make for pleasant travels.",
       location: [-1, -1],
     },
     visuals: {
@@ -127,7 +94,7 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       speedMod: 1,
       walkable: true,
       flavorText:
-        'The grass crunches like leaves under your foot. It seems weary even to the task of nourishing the wildlife. It is as though it is asking you to take up its cause.',
+        "The grass crunches like leaves under your foot. It seems weary even to the task of nourishing the wildlife. It is as though it is asking you to take up its cause.",
       location: [-1, -1],
     },
     visuals: {
@@ -144,7 +111,7 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       speedMod: 1.1,
       walkable: true,
       flavorText:
-        'These sands feel more like dust or ash than beaches. Life may never take root here.',
+        "These sands feel more like dust or ash than beaches. Life may never take root here.",
       location: [-1, -1],
     },
     visuals: {
@@ -177,7 +144,7 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       defaultStyle: TileName.DeepWater,
       speedMod: 4,
       walkable: false,
-      flavorText: 'Water black as night. God knows what lies beneath....',
+      flavorText: "Water black as night. God knows what lies beneath....",
       location: [-1, -1],
     },
     visuals: {
@@ -186,5 +153,5 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
       lightLevel: 1,
     },
   },
-}
-export default tileGetter
+};
+export default tileGetter;

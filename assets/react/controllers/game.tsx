@@ -1,7 +1,7 @@
 import * as React from "react";
-import GameMap from "../components/Map/GameMap";
+import GameMap from "../components/map/GameMap";
 import { useEffect, useState } from "react";
-import { noiseToTile } from "../classes/tiles";
+import { interpretIncomingTiles } from "../classes/tiles";
 
 import {
   GameState,
@@ -13,7 +13,7 @@ import {
   TileName,
 } from "../classes/enumsAndTypes";
 import axios from "axios";
-import SideBar from "../components/RightUI/SideBar";
+import SideBar from "../components/rightbar/SideBar";
 
 export default function (props: GameState): JSX.Element {
   const [currentScreen, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
@@ -27,6 +27,7 @@ export default function (props: GameState): JSX.Element {
   const [screenIndexState, setScreenIndexState] = useState<number>(
     props.state.screen
   );
+  const [oldScreenIndexState, setOldScreenIndexState] = useState<number>(-1);
 
   useEffect(() => {
     console.log(cachedScreens);
@@ -35,7 +36,7 @@ export default function (props: GameState): JSX.Element {
     );
     if (matchingScreen != undefined) {
       console.log("this should now redraw");
-      setCurrentScreen(noiseToTile(matchingScreen.screen));
+      setCurrentScreen(interpretIncomingTiles(matchingScreen.screen));
       updateCachedScreensWithoutChangingScreen(screenIndexState);
     } else {
       updateCachedScreensAndChangeScreen(screenIndexState);
@@ -43,6 +44,8 @@ export default function (props: GameState): JSX.Element {
   }, [screenIndexState]);
 
   function updateLocation(location: LocationTuple) {
+    if (screenIndexState !== oldScreenIndexState)
+      setOldScreenIndexState(screenIndexState);
     const screenIndex = +(
       Math.floor(location[0] / 30).toString() +
       Math.floor(location[1] / 30).toString()
@@ -57,13 +60,25 @@ export default function (props: GameState): JSX.Element {
         screen: screenIndex,
       })
       .then((res) => {
+        console.log(res.data)
         let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
+          if (i === undefined) return undefined;
           return i.screen[0].screen != undefined
             ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }
             : undefined;
         });
         console.log(parsedData);
         setCachedScreens(parsedData);
+        // save the screen we just left
+        console.log(oldScreenIndexState, screenIndex, cachedScreens[4])
+        axios
+          .post("http://127.0.0.1:8000/game/saveMap/" + props.state.name, {
+            screenIndex: oldScreenIndexState,
+            screen: cachedScreens[4].screen,
+          })
+          .then((res) => {
+            console.log(res.data);
+          });
       });
   }
 
@@ -88,7 +103,7 @@ export default function (props: GameState): JSX.Element {
           throw "error";
         }
         // set the current screen
-        setCurrentScreen(noiseToTile(matchingScreen.screen));
+        setCurrentScreen(interpretIncomingTiles(matchingScreen.screen));
         setCachedScreens(parsedData);
         console.log(parsedData);
       });
@@ -99,7 +114,12 @@ export default function (props: GameState): JSX.Element {
   }
 
   function saveGame() {
-    console.log(props.state.name, props.state.status, currentLocation, screenIndexState);
+    console.log(
+      props.state.name,
+      props.state.status,
+      currentLocation,
+      screenIndexState
+    );
     axios
       .post("http://127.0.0.1:8000/game/save/" + props.state.name, {
         state: {

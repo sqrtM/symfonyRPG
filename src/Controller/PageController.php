@@ -108,4 +108,31 @@ class PageController extends AbsCon
         }
         return new Response($response);
     }
+
+    #[Route('/game/saveMap/{name}', name: 'saveMap', methods: array('POST'))]
+    public function saveMap(string $name, Request $request): Response
+    {
+        $response = "success";
+        try {
+            $con = pg_connect($this->getConnectionString()) or throw new \Exception("could not connect to server");
+            // this is such a fucked up one-liner but it works properly. TODO: fix this.
+            $incomingScreenIndex = json_decode($request->getContent())->{'screenIndex'};
+            $incomingScreen = json_decode($request->getContent())->{'screen'};
+            pg_prepare(
+                $con,
+                'saveScreen',
+                'UPDATE ' . $name . ' SET screen = ' . "'" . json_encode($incomingScreen) . "'" . 'WHERE id = $1 RETURNING *;'
+            );
+            pg_send_execute($con, 'saveScreen', array($incomingScreenIndex));
+            if (pg_get_result($con) === false) {
+                throw new \Exception("failed to save.");
+            }
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+            $response = $e->getMessage();
+        } finally {
+            pg_close($con);
+        }
+        return new Response($response);
+    }
 }

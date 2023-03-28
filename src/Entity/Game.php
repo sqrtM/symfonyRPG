@@ -70,6 +70,19 @@ class Game
         pg_get_result($this->con);
     }
 
+    /**
+     * INITALIZING THE MAP
+     * BIG @todo: Here's the step by step of how we want to do this and why:
+     * 1.) currently, this creates NOISE, which then is sent to the user.
+     * 2.) the user interprets the noise and creates a map from it each time.
+     * 3.) this is a horrible idea because it prevents saving and modifying the world in any way.
+     * 4.) what we SHOULD do, is interpret the noise IN PHP, then send the interpreted noise to the user.
+     * 5.) then, when a user calls for a new screen, it sends a copy of the screen the user was just at to postgres to save it.
+     * 6.) the format will be: array("location" => Location, tileName => tileName). We are getting rid of "seen" for now.
+     * 7.) this will require a new function: $map->noiseToTile.
+     *
+     * @return void
+     */
     public function initMap()
     {
         $map = new Map($this->mapHeight, $this->mapWidth);
