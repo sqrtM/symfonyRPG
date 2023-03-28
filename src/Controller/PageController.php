@@ -54,7 +54,7 @@ class PageController extends AbsCon
                 $postgresStateArray = json_decode(pg_fetch_all($user->results)[0]['state'], true);
                 $gameState = array(
                 'name' => $postgresStateArray['name'],
-                'health' => $postgresStateArray['health'],
+                'status' => $postgresStateArray['status'],
                 'location' => $postgresStateArray['location'],
                 'screen' => $postgresStateArray['screen'],
                 );

@@ -43,7 +43,17 @@ class Game
 
         $gameState = array(
             'name' => $this->name,
-            'health' => 100,
+            'status' => array(
+                'health' => 100,
+                'mana' => array(
+                    'alpha' => 20,
+                    'beta' => 20,
+                    'gamma' => 20
+                ),
+                'hunger' => 0,
+                'sanity' => 0,
+                'rage' => 0
+            ),
             'location' => array($yCoord, $xCoord),
             'screen' => $startingScreen,
         );
@@ -65,11 +75,6 @@ class Game
         $map = new Map($this->mapHeight, $this->mapWidth);
         $noise = $map->build($this->seed);
         $screens = $map->splitIntoScreens($noise);
-        /*
-        fill the table with all the screens; this prevents us from having a single, enormous map, and we now, instead,
-        have several disconnected "screens". This makes more sense in terms of the game loop anyway. This also allows for
-        silly things in the future, like being able to query into pre-made dungeons or whatever.
-        */
         if (
             false !== pg_query(
                 $this->con,

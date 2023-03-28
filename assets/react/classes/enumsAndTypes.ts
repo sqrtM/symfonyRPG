@@ -17,7 +17,7 @@ export type MapInfo = {
 export type GameState = {
   state: {
     name: string;
-    health: number;
+    status: any;
     location: LocationTuple;
     screen: number;
   };
@@ -85,3 +85,22 @@ export type TileVisuals<Name> = {
   char: TileChar;
   lightLevel: number;
 };
+
+export type InventoryItem = {
+  name: string; //eventually, InventoryName enum
+  char: string; //eventually, InventoryChar enum
+  description: string;
+  //type: ItemType //armor, weapon, consumable...
+}
+
+export const exampleItem: InventoryItem = {
+  name: "example item",
+  char: "!",
+  description: "this is an example item."
+}
+
+export const emptyItem: InventoryItem = {
+  name: "empty",
+  char: "_",
+  description: "empty space"
+}

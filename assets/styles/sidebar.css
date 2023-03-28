@@ -1,0 +1,13 @@
+.player-info {
+    
+}
+
+#contentsDisplayUI {
+    font-size: medium;
+}
+
+.inventory-item {
+    font-size: 60px;
+    border: 2px solid blue;
+    margin-right: 5px;
+}

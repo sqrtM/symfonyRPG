@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Tile, TileName } from "../classes/enumsAndTypes";
+import { Tile, TileName } from "../../classes/enumsAndTypes";
 
 export type TileProps = {
   isPlayerHere: boolean; // this will later become a search for contents in the tile

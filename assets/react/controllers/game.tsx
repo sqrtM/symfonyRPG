@@ -1,5 +1,5 @@
 import * as React from "react";
-import GameMap from "../components/GameMap";
+import GameMap from "../components/Map/GameMap";
 import { useEffect, useState } from "react";
 import { noiseToTile } from "../classes/tiles";
 
@@ -13,7 +13,7 @@ import {
   TileName,
 } from "../classes/enumsAndTypes";
 import axios from "axios";
-import SideBar from "../components/SideBar";
+import SideBar from "../components/RightUI/SideBar";
 
 export default function (props: GameState): JSX.Element {
   const [currentScreen, setCurrentScreen] = useState<Tile<TileName>[][]>([]);
@@ -24,7 +24,9 @@ export default function (props: GameState): JSX.Element {
     props.state.location
   );
   const [selectedTile, setSelectedTile] = useState<Tile<TileName> | null>(null);
-  const [screenIndexState, setScreenIndexState] = useState<number>(props.state.screen);
+  const [screenIndexState, setScreenIndexState] = useState<number>(
+    props.state.screen
+  );
 
   useEffect(() => {
     console.log(cachedScreens);
@@ -34,7 +36,7 @@ export default function (props: GameState): JSX.Element {
     if (matchingScreen != undefined) {
       console.log("this should now redraw");
       setCurrentScreen(noiseToTile(matchingScreen.screen));
-      updateCachedScreensWithoutChangingScreen(screenIndexState)
+      updateCachedScreensWithoutChangingScreen(screenIndexState);
     } else {
       updateCachedScreensAndChangeScreen(screenIndexState);
     }
@@ -46,7 +48,7 @@ export default function (props: GameState): JSX.Element {
       Math.floor(location[1] / 30).toString()
     );
     setScreenIndexState(screenIndex);
-    setCurrentLocation(location)
+    setCurrentLocation(location);
   }
 
   function updateCachedScreensWithoutChangingScreen(screenIndex: number) {
@@ -67,29 +69,29 @@ export default function (props: GameState): JSX.Element {
 
   function updateCachedScreensAndChangeScreen(screenIndex: number) {
     console.log("screen not found. searching....");
-      axios
-        .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-          screen: screenIndex,
-        })
-        .then((res) => {
-          console.log(res.data)
-          let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
-            return i.screen[0].screen != undefined
-              ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }
-              : { id: i.id, screen: 0 };
-          });
-          let matchingScreen: ParsedScreen | undefined = parsedData.find(
-            (i: ParsedScreen) => i.id === props.state.screen
-          );
-          if (matchingScreen === undefined) {
-            //if we STILL cant find it...
-            throw "error";
-          }
-          // set the current screen
-          setCurrentScreen(noiseToTile(matchingScreen.screen));
-          setCachedScreens(parsedData);
-          console.log(parsedData);
+    axios
+      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
+        screen: screenIndex,
+      })
+      .then((res) => {
+        console.log(res.data);
+        let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
+          return i.screen[0].screen != undefined
+            ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }
+            : { id: i.id, screen: 0 };
         });
+        let matchingScreen: ParsedScreen | undefined = parsedData.find(
+          (i: ParsedScreen) => i.id === props.state.screen
+        );
+        if (matchingScreen === undefined) {
+          //if we STILL cant find it...
+          throw "error";
+        }
+        // set the current screen
+        setCurrentScreen(noiseToTile(matchingScreen.screen));
+        setCachedScreens(parsedData);
+        console.log(parsedData);
+      });
   }
 
   function mapHover(tile: Tile<TileName>) {
@@ -97,12 +99,12 @@ export default function (props: GameState): JSX.Element {
   }
 
   function saveGame() {
-    console.log(props.state.name, 100, currentLocation, screenIndexState);
+    console.log(props.state.name, props.state.status, currentLocation, screenIndexState);
     axios
       .post("http://127.0.0.1:8000/game/save/" + props.state.name, {
         state: {
           name: props.state.name,
-          health: 100,
+          status: props.state.status,
           location: currentLocation,
           screen: screenIndexState,
         },

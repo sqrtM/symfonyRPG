@@ -54,7 +54,20 @@ import { useState } from 'react';
  * it should be very powerful, but come at incredible cost.
  * 
  * NPCs may be around the map to give hints in exchange for other things. 
- * Their dialogue will also happen in the bottom right corner. 
+ * Their dialogue will also happen in the bottom right corner.
+ * 
+ * 
+ * INFO ON MANA TYPES:
+ * ALPHA is for the more traditional "arcane", world of warcraft style magics.
+ * at low levels, it is D&D magic missile-style stuff, but at higher levels and 
+ * lower sanities, allows for more horrifying elemental attacks.
+ * 
+ * BETA should be, I think, related to etrian oddysey style binds. It affects the bodies
+ * of enemies directly and prevents movement or can force certain kinds of movement. Maybe
+ * it can also be for healing (bc related to body)
+ * 
+ * GAMMA  ??????
+ * traveral magic? stealth? battle magic? 
  */
 export default function (): JSX.Element {
   function handleClick() {

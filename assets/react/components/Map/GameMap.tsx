@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { LocationTuple, Tile, TileName } from "../classes/enumsAndTypes";
+import { LocationTuple, Tile, TileName } from "../../classes/enumsAndTypes";
 import TileSpan from "./TileSpan";
 
 export type MapState = {
