@@ -30,6 +30,17 @@ class State extends \stdClass implements \JsonSerializable
         $this->stateObj = $generic;
     }
 
+    public function saveGame(\PgSql\Connection $con)
+    {
+        $query = 'UPDATE games SET state = ' . "'" . json_encode($this->stateObj) . "'WHERE name = $1 RETURNING *;";
+        pg_prepare($con, 'getScreen', $query);
+        pg_send_execute($con, 'getScreen', array($this->stateObj->name));
+        if (pg_get_result($con) === false) {
+            throw new \Exception("failed to save.");
+        }
+    }
+
+
     /**
      * Specify data which should be serialized to JSON
      * Serializes the object to a value that can be serialized natively by json_encode().

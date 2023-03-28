@@ -62,8 +62,8 @@ class Game
 
     public function initMap()
     {
-        $map = new Map($this->mapHeight, $this->mapWidth, $this->seed);
-        $noise = $map->build();
+        $map = new Map($this->mapHeight, $this->mapWidth);
+        $noise = $map->build($this->seed);
         $screens = $map->splitIntoScreens($noise);
         /*
         fill the table with all the screens; this prevents us from having a single, enormous map, and we now, instead,
