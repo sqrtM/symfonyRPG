@@ -20,7 +20,9 @@ export const tileGetter = {
   },
 };
 
-export function interpretIncomingTiles(incomingArray: MapInfo[][]): Tile<TileName>[][] {
+export function interpretIncomingTiles(
+  incomingArray: MapInfo[][]
+): Tile<TileName>[][] {
   let newTileMap: Tile<TileName>[][] = Array.from({ length: 30 }, () =>
     Array.from({ length: 30 }, () => tileGetter.get(TileName.Grass, [0, 0]))
   );
@@ -35,7 +37,7 @@ export function interpretIncomingTiles(incomingArray: MapInfo[][]): Tile<TileNam
   return newTileMap;
 }
 
-const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
+export const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
   Wall: {
     name: TileName.Wall,
     properties: {
@@ -150,6 +152,22 @@ const tileDefinitions: { [key in TileName]: TileType<TileName> } = {
     visuals: {
       style: TileName.DeepWater,
       char: TileChar.DeepWater,
+      lightLevel: 1,
+    },
+  },
+  Example: {
+    name: TileName.Example,
+    properties: {
+      defaultChar: TileChar.Example,
+      defaultStyle: TileName.Example,
+      speedMod: 1,
+      walkable: true,
+      flavorText: "this is an example of a tile",
+      location: [-1, -1],
+    },
+    visuals: {
+      style: TileName.Example,
+      char: TileChar.Example,
       lightLevel: 1,
     },
   },

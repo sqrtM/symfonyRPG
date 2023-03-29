@@ -72,6 +72,8 @@ export enum TileName {
   Shore = "Shore",
   Water = "Water",
   DeepWater = "DeepWater",
+
+  Example = "Example"
 }
 
 export enum TileChar {
@@ -82,6 +84,8 @@ export enum TileChar {
   Shore = "%",
   Water = "~",
   DeepWater = "*",
+
+  Example = "5"
 }
 
 export type TileProperties<Name> = {

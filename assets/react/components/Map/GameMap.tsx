@@ -8,6 +8,7 @@ export type MapState = {
   location: LocationTuple;
   grabNewScreen: Function;
   mapHover: Function;
+  tileClicked: Function;
 };
 
 export default function (props: MapState): JSX.Element {
@@ -84,6 +85,7 @@ export default function (props: MapState): JSX.Element {
                   tile={tile}
                   key={`key-${xCoord}-tile-${yCoord}`}
                   mapHover={props.mapHover}
+                  tileClicked={props.tileClicked}
                 />
               );
             })}

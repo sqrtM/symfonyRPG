@@ -5,6 +5,7 @@ export type TileProps = {
   isPlayerHere: boolean; // this will later become a search for contents in the tile
   tile: Tile<TileName>;
   mapHover: Function
+  tileClicked: Function
 };
 
 export default function (props: TileProps): JSX.Element {
@@ -13,6 +14,10 @@ export default function (props: TileProps): JSX.Element {
     props.mapHover(tile)
   } 
 
+  const tileClicked = (tile: Tile<TileName>) => {
+    props.tileClicked(tile)
+  }
+
   return (
     <span
       className={
@@ -20,6 +25,7 @@ export default function (props: TileProps): JSX.Element {
       }
       onMouseOver={() => handleHover(props.tile)}
       onMouseLeave={() => handleHover(null)}
+      onClick={() => tileClicked(props.tile)}
     >
       {props.isPlayerHere ? "@" : props.tile.properties.defaultChar}
     </span>

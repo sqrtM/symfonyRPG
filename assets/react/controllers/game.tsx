@@ -1,7 +1,7 @@
 import * as React from "react";
 import GameMap from "../components/map/GameMap";
 import { useEffect, useState } from "react";
-import { interpretIncomingTiles } from "../classes/tiles";
+import tileGetter, { interpretIncomingTiles } from "../classes/tiles";
 
 import {
   GameState,
@@ -12,6 +12,7 @@ import {
   Tile,
   TileName,
 } from "../classes/enumsAndTypes";
+//import { dig } from "../classes/abilities";
 import axios from "axios";
 import SideBar from "../components/rightbar/SideBar";
 
@@ -28,6 +29,7 @@ export default function (props: GameState): JSX.Element {
     props.state.screen
   );
   const [oldScreenIndexState, setOldScreenIndexState] = useState<number>(-1);
+  const [selectedAbility, setSelectedAbility] = useState<string | null>(null); // this will later come from an ability enum
 
   useEffect(() => {
     console.log(cachedScreens);
@@ -54,13 +56,39 @@ export default function (props: GameState): JSX.Element {
     setCurrentLocation(location);
   }
 
+  /**
+   * @todo THE SAVING OF THE MAP DOESNT WORK FOR TILES WHICH WERE
+   * MODIFIED BY THE PLAYER. I AM NOT SURE WHY. 
+   * Tiles are modified, then the cache is modified, then the 
+   * cache is sent to the DB. 
+   * 
+   * POSSIBLE SOLUTION: 
+   * Extract the "save map" thing to it's own function and have
+   * it take the screen you want to save as an argument.
+   * The reason this may work is because I believe the reason
+   * it's not working is because of React's weird async
+   * state issues. 
+   */
   function updateCachedScreensWithoutChangingScreen(screenIndex: number) {
+    // save the screen we just left
+    // EXTRACT THIS TO IT'S OWN FUNCTION.
+    console.log(oldScreenIndexState, screenIndex, cachedScreens[4]);
+    axios
+      .post("http://127.0.0.1:8000/game/saveMap/" + props.state.name, {
+        screenIndex: oldScreenIndexState,
+        screen: cachedScreens[4].screen,
+      })
+      .then((res) => {
+        console.log(res.data);
+      });
+
+
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
         screen: screenIndex,
       })
       .then((res) => {
-        console.log(res.data)
+        console.log(res.data);
         let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
           if (i === undefined) return undefined;
           return i.screen[0].screen != undefined
@@ -69,16 +97,6 @@ export default function (props: GameState): JSX.Element {
         });
         console.log(parsedData);
         setCachedScreens(parsedData);
-        // save the screen we just left
-        console.log(oldScreenIndexState, screenIndex, cachedScreens[4])
-        axios
-          .post("http://127.0.0.1:8000/game/saveMap/" + props.state.name, {
-            screenIndex: oldScreenIndexState,
-            screen: cachedScreens[4].screen,
-          })
-          .then((res) => {
-            console.log(res.data);
-          });
       });
   }
 
@@ -113,6 +131,42 @@ export default function (props: GameState): JSX.Element {
     setSelectedTile(tile);
   }
 
+  function tileClicked(tile: Tile<TileName>) {
+    if (selectedAbility === "dig") {
+      let loc = findTileInCachedScreens(
+        cachedScreens[4].id,
+        tile.properties.location
+      );
+      let newCache = cachedScreens;
+      newCache[4].screen[loc[0]][loc[1]].tileName = TileName.Example;
+      setCachedScreens(newCache);
+      currentScreen[loc[0]][loc[1]] = tileGetter.get(
+        TileName.Example,
+        tile.properties.location
+      );
+      console.log(loc);
+    } else {
+      console.log(tile + " was clicked. not dug.");
+    }
+  }
+
+  function findTileInCachedScreens(
+    id: number,
+    location: LocationTuple
+  ): LocationTuple {
+    /*
+    let firstRow = +id.toString()[0] * 30;
+    let tileRow = location[0] - firstRow;
+    let firstCol = +id.toString()[1] * 30;
+    let tileCol = location[1] - firstCol;
+    return [tileRow, tileCol];
+    */
+    return [
+      location[0] - +id.toString()[0] * 30,
+      location[1] - +id.toString()[1] * 30,
+    ];
+  }
+
   function saveGame() {
     console.log(
       props.state.name,
@@ -141,8 +195,13 @@ export default function (props: GameState): JSX.Element {
         location={currentLocation}
         grabNewScreen={updateLocation}
         mapHover={mapHover}
+        tileClicked={tileClicked}
       />
-      <SideBar state={props.state} selectedTile={selectedTile} />
+      <SideBar
+        state={props.state}
+        selectedTile={selectedTile}
+        setAbility={setSelectedAbility}
+      />
       <input
         type="button"
         value="save game"

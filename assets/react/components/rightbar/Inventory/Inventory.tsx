@@ -19,8 +19,14 @@ export default function (props: InventoryProps): JSX.Element {
   return (
     <div>
       <div>
-        {props.inventory.map((i: InventoryItem[]) => {
-          return <InventoryRow itemArray={i} itemHover={itemHover} />;
+        {props.inventory.map((i: InventoryItem[], index: number) => {
+          return (
+            <InventoryRow
+              itemArray={i}
+              itemHover={itemHover}
+              rowNumber={index}
+            />
+          );
         })}
       </div>
       <div>{selectedItem && <ItemViewer item={selectedItem} />}</div>
