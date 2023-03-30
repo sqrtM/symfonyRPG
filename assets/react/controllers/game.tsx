@@ -2,7 +2,6 @@ import * as React from "react";
 import GameMap from "../components/map/GameMap";
 import { useEffect, useState } from "react";
 import tileGetter, { interpretIncomingTiles } from "../classes/tiles";
-
 import {
   GameState,
   IncomingScreen,
@@ -29,7 +28,8 @@ export default function (props: GameState): JSX.Element {
     props.state.screen
   );
   const [oldScreenIndexState, setOldScreenIndexState] = useState<number>(-1);
-  const [selectedAbility, setSelectedAbility] = useState<string | null>(null); // this will later come from an ability enum
+  // this will later come from an ability enum
+  const [selectedAbility, setSelectedAbility] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(cachedScreens);
@@ -37,17 +37,12 @@ export default function (props: GameState): JSX.Element {
       (i: { id: number; screen: MapInfo[][] }) => i.id === screenIndexState
     );
     if (matchingScreen != undefined) {
-      console.log("this should now redraw");
       setCurrentScreen(interpretIncomingTiles(matchingScreen.screen));
-      updateCachedScreensWithoutChangingScreen(screenIndexState);
-      console.log(
-        "should this update?" + screenIndexState,
-        oldScreenIndexState
-      );
+      updateCachedScreens(screenIndexState);
       if (screenIndexState !== oldScreenIndexState)
         setOldScreenIndexState(screenIndexState);
     } else {
-      updateCachedScreensAndChangeScreen(screenIndexState);
+      initializeMap(screenIndexState);
     }
   }, [screenIndexState]);
 
@@ -60,77 +55,69 @@ export default function (props: GameState): JSX.Element {
     setCurrentLocation(location);
   }
 
-  function saveMapScreen() {
-    // save the screen we just left
-    console.log(oldScreenIndexState);
+  function saveMapScreen(index: number) {
     axios
       .post("http://127.0.0.1:8000/game/saveMap/" + props.state.name, {
-        screenIndex: oldScreenIndexState,
+        screenIndex: index,
         screen: cachedScreens[4].screen,
       })
       .then((res) => {
-        console.log(res.data);
+        console.log(res.data === "success" ? "map saved" : res.data);
+      });
+  }
+
+  function updateCachedScreens(screenIndex: number) {
+    saveMapScreen(oldScreenIndexState);
+    axios
+      .post<IncomingScreen[]>(
+        "http://127.0.0.1:8000/game/api/" + props.state.name,
+        {
+          screen: screenIndex,
+        }
+      )
+      .then((res) => {
+        setCachedScreens(parseData(res.data));
       });
   }
 
   /**
-   * @todo THE SAVING OF THE MAP DOESNT WORK FOR TILES WHICH WERE
-   * MODIFIED BY THE PLAYER. I AM NOT SURE WHY.
-   * Tiles are modified, then the cache is modified, then the
-   * cache is sent to the DB.
-   *
-   * POSSIBLE SOLUTION:
-   * Extract the "save map" thing to it's own function and have
-   * it take the screen you want to save as an argument.
-   * The reason this may work is because I believe the reason
-   * it's not working is because of React's weird async
-   * state issues.
+   * if this is called MORE THAN ONCE per session, something has happened.
+   * usually the player was moving faster than we could find the screen.
+   * @param screenIndex
    */
-  function updateCachedScreensWithoutChangingScreen(screenIndex: number) {
-    console.log("about to save screen");
-    saveMapScreen();
-    axios
-      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-        screen: screenIndex,
-      })
-      .then((res) => {
-        console.log(res.data);
-        let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
-          if (i === undefined) return undefined;
-          return i.screen[0].screen != undefined
-            ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }
-            : undefined;
-        });
-        console.log(parsedData);
-        setCachedScreens(parsedData);
-      });
-  }
-
-  function updateCachedScreensAndChangeScreen(screenIndex: number) {
+  function initializeMap(screenIndex: number) {
     console.log("screen not found. searching....");
     axios
-      .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
-        screen: screenIndex,
-      })
+      .post<IncomingScreen[]>(
+        "http://127.0.0.1:8000/game/api/" + props.state.name,
+        {
+          screen: screenIndex,
+        }
+      )
       .then((res) => {
-        console.log(res.data);
-        let parsedData: ParsedScreen[] = res.data.map((i: IncomingScreen) => {
-          return i.screen[0].screen != undefined
-            ? { id: i.id, screen: JSON.parse(i.screen[0].screen) }
-            : { id: i.id, screen: 0 };
-        });
+        let parsedData: ParsedScreen[] = parseData(res.data);
         let matchingScreen: ParsedScreen | undefined = parsedData.find(
           (i: ParsedScreen) => i.id === props.state.screen
         );
         if (matchingScreen === undefined) {
-          //if we STILL cant find it...
-          throw "error";
+          throw "screen wasn't found, but SHOULD have been found...";
         }
-        // set the current screen
         setCurrentScreen(interpretIncomingTiles(matchingScreen.screen));
         setCachedScreens(parsedData);
-        console.log(parsedData);
       });
+  }
+
+  function parseData(arr: IncomingScreen[]): ParsedScreen[] {
+    let parsedData: { id: number; screen: MapInfo[][] }[] = [];
+    arr.forEach((i: IncomingScreen) => {
+      i.screen[0].screen != undefined
+        ? parsedData.push({ id: i.id, screen: JSON.parse(i.screen[0].screen) })
+        : parsedData.push({
+            id: -1,
+            screen: undefined as unknown as MapInfo[][],
+          }); // oob
+    });
+    return parsedData;
   }
 
   function mapHover(tile: Tile<TileName>) {
@@ -138,35 +125,34 @@ export default function (props: GameState): JSX.Element {
   }
 
   function tileClicked(tile: Tile<TileName>) {
+    let currentCachedScreen = cachedScreens[4];
     if (selectedAbility === "dig") {
       let loc = findTileInCachedScreens(
-        cachedScreens[4].id,
+        currentCachedScreen.id,
         tile.properties.location
       );
       let newCache = cachedScreens;
-      newCache[4].screen[loc[0]][loc[1]].tileName = TileName.Example;
+      let newCurrentCachedScreen = newCache[4];
+      newCurrentCachedScreen.screen[loc[0]][loc[1]].tileName = TileName.Example;
       setCachedScreens(newCache);
       currentScreen[loc[0]][loc[1]] = tileGetter.get(
         TileName.Example,
         tile.properties.location
       );
-      console.log(loc);
     } else {
-      console.log(tile + " was clicked. not dug.");
+      console.log(tile + " was clicked.");
     }
   }
 
+  /**
+   * @param id id of the screen within the cached screens
+   * @param location what is the exact y, x location of the tile WITHIN the screen
+   * @returns where the tile is
+   */
   function findTileInCachedScreens(
     id: number,
     location: LocationTuple
   ): LocationTuple {
-    /*
-    let firstRow = +id.toString()[0] * 30;
-    let tileRow = location[0] - firstRow;
-    let firstCol = +id.toString()[1] * 30;
-    let tileCol = location[1] - firstCol;
-    return [tileRow, tileCol];
-    */
     return [
       location[0] - +id.toString()[0] * 30,
       location[1] - +id.toString()[1] * 30,
@@ -174,12 +160,7 @@ export default function (props: GameState): JSX.Element {
   }
 
   function saveGame() {
-    console.log(
-      props.state.name,
-      props.state.status,
-      currentLocation,
-      screenIndexState
-    );
+    saveMapScreen(screenIndexState);
     axios
       .post("http://127.0.0.1:8000/game/save/" + props.state.name, {
         state: {
@@ -190,7 +171,7 @@ export default function (props: GameState): JSX.Element {
         },
       })
       .then((res) => {
-        console.log(res.data);
+        console.log(res.data === "success" ? "game saved" : res.data);
       });
   }
 
