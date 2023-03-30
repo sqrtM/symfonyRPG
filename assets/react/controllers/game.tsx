@@ -40,14 +40,18 @@ export default function (props: GameState): JSX.Element {
       console.log("this should now redraw");
       setCurrentScreen(interpretIncomingTiles(matchingScreen.screen));
       updateCachedScreensWithoutChangingScreen(screenIndexState);
+      console.log(
+        "should this update?" + screenIndexState,
+        oldScreenIndexState
+      );
+      if (screenIndexState !== oldScreenIndexState)
+        setOldScreenIndexState(screenIndexState);
     } else {
       updateCachedScreensAndChangeScreen(screenIndexState);
     }
   }, [screenIndexState]);
 
   function updateLocation(location: LocationTuple) {
-    if (screenIndexState !== oldScreenIndexState)
-      setOldScreenIndexState(screenIndexState);
     const screenIndex = +(
       Math.floor(location[0] / 30).toString() +
       Math.floor(location[1] / 30).toString()
@@ -56,23 +60,9 @@ export default function (props: GameState): JSX.Element {
     setCurrentLocation(location);
   }
 
-  /**
-   * @todo THE SAVING OF THE MAP DOESNT WORK FOR TILES WHICH WERE
-   * MODIFIED BY THE PLAYER. I AM NOT SURE WHY. 
-   * Tiles are modified, then the cache is modified, then the 
-   * cache is sent to the DB. 
-   * 
-   * POSSIBLE SOLUTION: 
-   * Extract the "save map" thing to it's own function and have
-   * it take the screen you want to save as an argument.
-   * The reason this may work is because I believe the reason
-   * it's not working is because of React's weird async
-   * state issues. 
-   */
-  function updateCachedScreensWithoutChangingScreen(screenIndex: number) {
+  function saveMapScreen() {
     // save the screen we just left
-    // EXTRACT THIS TO IT'S OWN FUNCTION.
-    console.log(oldScreenIndexState, screenIndex, cachedScreens[4]);
+    console.log(oldScreenIndexState);
     axios
       .post("http://127.0.0.1:8000/game/saveMap/" + props.state.name, {
         screenIndex: oldScreenIndexState,
@@ -81,8 +71,24 @@ export default function (props: GameState): JSX.Element {
       .then((res) => {
         console.log(res.data);
       });
+  }
 
-
+  /**
+   * @todo THE SAVING OF THE MAP DOESNT WORK FOR TILES WHICH WERE
+   * MODIFIED BY THE PLAYER. I AM NOT SURE WHY.
+   * Tiles are modified, then the cache is modified, then the
+   * cache is sent to the DB.
+   *
+   * POSSIBLE SOLUTION:
+   * Extract the "save map" thing to it's own function and have
+   * it take the screen you want to save as an argument.
+   * The reason this may work is because I believe the reason
+   * it's not working is because of React's weird async
+   * state issues.
+   */
+  function updateCachedScreensWithoutChangingScreen(screenIndex: number) {
+    console.log("about to save screen");
+    saveMapScreen();
     axios
       .post("http://127.0.0.1:8000/game/api/" + props.state.name, {
         screen: screenIndex,
